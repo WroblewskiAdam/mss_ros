@@ -1,0 +1,21 @@
+# Pliki i katalogi generowane przez Colcon i ROS
+/build/
+/install/
+/log/
+/src/build/
+/src/install/
+/src/log/
+
+# Pliki tymczasowe edytorów
+*.swp
+*~
+.DS_Store
+
+# Pliki i katalogi specyficzne dla Pythona
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+
+# Ignoruj pliki bazy danych kompilacji
+compile_commands.json
