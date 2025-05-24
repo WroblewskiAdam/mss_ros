@@ -5,6 +5,8 @@ from geometry_msgs.msg import Vector3, Quaternion
 import board
 import busio
 import time
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+
 
 from adafruit_bno08x import (
     BNO_REPORT_ACCELEROMETER,
@@ -29,8 +31,14 @@ class IMUPublisher(Node):
         self.bno.enable_feature(BNO_REPORT_ROTATION_VECTOR)
         self.bno.enable_feature(BNO_REPORT_LINEAR_ACCELERATION)
 
-        self.imu_pub = self.create_publisher(Imu, 'imu/data_raw', 100)
-        self.mag_pub = self.create_publisher(MagneticField, 'imu/mag', 100)
+        sensor_qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=10  # Bufor na 10 wiadomości
+        )
+
+        self.imu_pub = self.create_publisher(Imu, 'imu/data_raw', sensor_qos_profile)
+        self.mag_pub = self.create_publisher(MagneticField, 'imu/mag', sensor_qos_profile)
 
         self.timer = self.create_timer(0.01, self.publish_data)  # 10 Hz
 

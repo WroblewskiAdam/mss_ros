@@ -24,7 +24,7 @@ class GpsRtkNode(Node):
         self.declare_parameter('baud_rate', 115200)
         self.declare_parameter('ntrip_ip', 'system.asgeupos.pl')
         self.declare_parameter('ntrip_port', 8080)
-        self.declare_parameter('ntrip_mountpoint', 'RTN4G_VRS_RTCM32')
+        self.declare_parameter('ntrip_mountpoint', 'RTN4G_VRS_RTCM32') 
         self.declare_parameter('ntrip_user', 'pwmgr/adamwrb')
         self.declare_parameter('ntrip_password', 'Globus7142001')
         self.declare_parameter('gngga_ntrip_interval', 10.0) # sekundy
