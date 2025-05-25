@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'servo_node = servo_controller.servo_node:main',
+            'servo_teleop = servo_controller.servo_teleop_node:main',
         ],
     },
 )

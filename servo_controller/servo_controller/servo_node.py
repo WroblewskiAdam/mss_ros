@@ -4,96 +4,127 @@ from std_msgs.msg import Int32
 
 from adafruit_servokit import ServoKit
 import time
-import signal
-import sys
 
-# ros2 topic pub /servo_angle std_msgs/msg/Int32 '{data: 90}'
 class ServoController(Node):
     def __init__(self):
         super().__init__('servo_controller')
         
-        # Publisher for current servo position
-        self.position_publisher = self.create_publisher(Int32, 'servo/position', 10)
-        
-        # Subscription to target servo angle
-        self.subscription = self.create_subscription(
-            Int32,
-            'servo_angle',
-            self.angle_callback,
-            10)
-        
-        self.kit = ServoKit(channels=16)
+        # --- Parametry i stałe ---
+        self.SERVO_SPEED_DEGPS = 750.0  # Prędkość serwa w stopniach/sekundę
+        MOVEMENT_FREQUENCY = 100.0      # Częstotliwość pętli ruchu (wysoka dla płynności)
+        PUBLISH_FREQUENCY = 20.0        # Docelowa częstotliwość publikowania pozycji
+
+        # --- Zmienne stanu ---
+        self.current_simulated_angle = 0.0
+        self.target_angle = 0.0
+
+        # --- Konfiguracja serwo ---
+        try:
+            self.kit = ServoKit(channels=16)
+        except Exception as e:
+            self.get_logger().error(f"Nie udało się zainicjować ServoKit (PCA9685): {e}")
+            rclpy.shutdown()
+            return
+
         self.servo_channel = 0
         self.kit.servo[self.servo_channel].set_pulse_width_range(500, 2500)
         
+        # --- Subskrypcja ---
+        self.subscription = self.create_subscription(
+            Int32,
+            'servo/set_angle',
+            self.set_target_angle_callback,
+            10)
+        
+        # --- Publisher ---
+        self.position_publisher = self.create_publisher(Int32, 'servo/position', 10)
+        
+        # === NOWA ARCHITEKTURA: DWA TIMERY ===
+        # 1. Timer do obliczania RUCHU serwa (wysoka częstotliwość)
+        movement_timer_period = 1.0 / MOVEMENT_FREQUENCY
+        self.movement_timer = self.create_timer(movement_timer_period, self.movement_step_callback)
+        
+        # 2. Timer do ciągłego PUBLIKOWANIA pozycji (zadana częstotliwość)
+        publish_timer_period = 1.0 / PUBLISH_FREQUENCY
+        self.publish_timer = self.create_timer(publish_timer_period, self.publish_position_callback)
+        # ====================================
+        
         self.get_logger().info('Servo controller node started.')
+        self.get_logger().info(f'Movement simulation at {MOVEMENT_FREQUENCY}Hz.')
+        self.get_logger().info(f'Position publishing at {PUBLISH_FREQUENCY}Hz.')
 
-        # Initialize servo to 0 degrees at startup
-        self.set_angle(0)
+        self.set_initial_angle(0)
 
-    def angle_callback(self, msg):
-        angle = msg.data
-        if 0 <= angle <= 180:
-            self.get_logger().info(f"Moving servo to {angle} degrees")
-            self.smooth_move(self.servo_channel, angle, speed=10)
+    def set_initial_angle(self, angle: int):
+        """Ustawia pozycję początkową natychmiast."""
+        safe_angle = float(max(0, min(180, angle)))
+        self.current_simulated_angle = safe_angle
+        self.target_angle = safe_angle
+        self.kit.servo[self.servo_channel].angle = int(safe_angle)
+        
+    def set_target_angle_callback(self, msg):
+        """Callback dla /servo/set_angle. Ustawia tylko cel."""
+        target_angle = msg.data
+        if 0 <= target_angle <= 180:
+            self.get_logger().info(f"Received command. New target: {target_angle} degrees.")
+            self.target_angle = float(target_angle)
         else:
-            self.get_logger().warn('Received angle out of bounds (0-180). Ignoring.')
+            self.get_logger().warn(f"Received angle {target_angle} out of bounds (0-180). Ignoring command.")
 
-    def scale_speed(self, user_speed):
-        return int(1 + ((user_speed - 1) * (99 / 9)))
-
-    def smooth_move(self, channel, target_angle, speed):
-        current_angle = self.kit.servo[channel].angle
-        if current_angle is None:
-            current_angle = 0
-        else:
-            current_angle = int(current_angle)
-
-        scaled_speed = self.scale_speed(speed)
-        if scaled_speed >= 100:
-            self.kit.servo[channel].angle = target_angle
-            self.publish_position(target_angle)
+    def movement_step_callback(self):
+        """
+        Pętla RUCHU. Oblicza nowy kąt i wysyła komendę do fizycznego serwa.
+        Nie publikuje żadnych wiadomości.
+        """
+        error = self.target_angle - self.current_simulated_angle
+        if abs(error) < 0.01:
             return
 
-        delay = 0.1 * ((100 - scaled_speed) / 100) ** 2
-        step = 1 if target_angle > current_angle else -1
+        tick_duration = self.movement_timer.timer_period_ns / 1e9
+        max_step = self.SERVO_SPEED_DEGPS * tick_duration
+        
+        step = max_step if error > 0 else -max_step
+        if abs(error) < abs(step):
+            step = error
+            
+        self.current_simulated_angle += step
+        self.kit.servo[self.servo_channel].angle = int(round(self.current_simulated_angle))
 
-        for angle in range(current_angle, target_angle + step, step):
-            self.kit.servo[channel].angle = angle
-            self.publish_position(angle)
-            time.sleep(delay)
-
-    def publish_position(self, angle):
+    def publish_position_callback(self):
+        """
+        Pętla PUBLIKOWANIA. Działa zawsze z zadaną częstotliwością.
+        Pobiera ostatni obliczony kąt i go publikuje.
+        """
         msg = Int32()
-        msg.data = angle
+        msg.data = int(round(self.current_simulated_angle))
         self.position_publisher.publish(msg)
 
-    def set_angle(self, angle, publish=True):
+    def set_angle_for_shutdown(self, angle_degrees: int):
+        """Ustawia kąt przy zamykaniu."""
         try:
-            self.kit.servo[self.servo_channel].angle = angle
-            if publish:
-                self.publish_position(angle)
+            self.kit.servo[self.servo_channel].angle = angle_degrees
         except Exception as e:
-            self.get_logger().error(f'Error setting angle: {e}')
-
+            self.get_logger().error(f"Error setting servo angle to {angle_degrees} during shutdown: {e}")
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ServoController()
-
+    servo_controller_node = None
     try:
-        rclpy.spin(node)
+        servo_controller_node = ServoController()
+        if rclpy.ok() and hasattr(servo_controller_node, 'kit'): 
+            rclpy.spin(servo_controller_node)
     except KeyboardInterrupt:
-        node.get_logger().info('Keyboard Interrupt detected! Shutting down...')
+        if servo_controller_node:
+            servo_controller_node.get_logger().info('Keyboard Interrupt detected! Shutting down...')
     finally:
-        # Set servo to 0 without publishing (bo publisher będzie zamykany)
-        node.set_angle(0, publish=False)
-        time.sleep(0.5)
-        node.destroy_node()
+        if servo_controller_node and rclpy.ok() and hasattr(servo_controller_node, 'kit'):
+            servo_controller_node.get_logger().info('Setting servo to 0 before shutdown.')
+            servo_controller_node.set_angle_for_shutdown(0)
+            time.sleep(0.5)
+            servo_controller_node.destroy_node()
+        
         if rclpy.ok():
             rclpy.shutdown()
 
-
 if __name__ == '__main__':
     main()
-
