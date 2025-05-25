@@ -4,17 +4,29 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Int32
 import threading
+from my_robot_interfaces.msg import StampedInt32
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+
 
 class ServoTeleop(Node):
     def __init__(self):
         super().__init__('servo_teleop')
 
-        # Publisher, który wysyła docelowy kąt do węzła serwa.
-        # Upewniamy się, że temat jest zgodny z subskrypcją w 'servo_node.py'.
-        self.publisher_ = self.create_publisher(Int32, 'servo/set_angle', 10)
+         # Definicja profilu QoS
+        sensor_qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+
+        self.publisher_ = self.create_publisher(
+            StampedInt32, 
+            'servo/set_angle', 
+            qos_profile=sensor_qos_profile # Użyj profilu
+        )
 
         # Timer do cyklicznego publikowania z częstotliwością 20 Hz
-        timer_period = 1.0 / 20.0  # 50 milisekund
+        timer_period = 1.0 / 50.0  # 50 milisekund
         self.timer = self.create_timer(timer_period, self.publish_callback)
 
         # Zmienna do przechowywania docelowego kąta i blokada do synchronizacji wątków
@@ -33,7 +45,8 @@ class ServoTeleop(Node):
         """
         Funkcja wywoływana przez timer. Publikuje aktualnie ustawiony kąt docelowy.
         """
-        msg = Int32()
+        msg = StampedInt32()
+        msg.header.stamp = self.get_clock().now().to_msg()
         with self.lock:
             msg.data = self.target_angle
         self.publisher_.publish(msg)

@@ -6,12 +6,16 @@ from datetime import datetime
 
 from sensor_msgs.msg import Imu
 from gps_rtk_msgs.msg import GpsRtk
+from std_msgs.msg import Int32  # Import wiadomości dla serwa
+import message_filters  # Import dla synchronizacji
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from my_robot_interfaces.msg import StampedInt32
+
 
 
 class DataLoggerNode(Node):
     def __init__(self):
-        super().__init__('data_logger_node_no_sync')
+        super().__init__('data_logger_node_sync')
 
         # --- Konfiguracja plików wyjściowych ---
         log_directory = os.path.join(os.path.expanduser('~'), 'ros2_logs_raw')
@@ -20,14 +24,15 @@ class DataLoggerNode(Node):
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-        # Plik dla GPS
-        self.gps_log_path = os.path.join(log_directory, f'gps_log_{timestamp}.csv')
-        self.gps_csv_file = open(self.gps_log_path, 'w', newline='')
-        self.gps_csv_writer = csv.writer(self.gps_csv_file)
-        self.gps_csv_writer.writerow(['ros_time_sec', 'ros_time_nsec', 'rtk_status', 'latitude_deg', 'longitude_deg', 'altitude_m', 'speed_mps', 'heading_deg'])
-        self.get_logger().info(f"Logowanie danych GPS do: {self.gps_log_path}")
+        # Plik dla zsynchronizowanych danych GPS i serwa
+        self.sync_log_path = os.path.join(log_directory, f'gps_servo_log_{timestamp}.csv')
+        self.sync_csv_file = open(self.sync_log_path, 'w', newline='')
+        self.sync_csv_writer = csv.writer(self.sync_csv_file)
+        # Dodajemy kolumny dla serwa
+        self.sync_csv_writer.writerow(['ros_time_sec', 'ros_time_nsec', 'rtk_status', 'latitude_deg', 'longitude_deg', 'altitude_m', 'speed_mps', 'heading_deg', 'servo_target_angle', 'servo_current_position'])
+        self.get_logger().info(f"Logowanie zsynchronizowanych danych GPS i serwa do: {self.sync_log_path}")
 
-        # Plik dla IMU
+        # Plik dla IMU (pozostaje bez zmian)
         self.imu_log_path = os.path.join(log_directory, f'imu_log_{timestamp}.csv')
         self.imu_csv_file = open(self.imu_log_path, 'w', newline='')
         self.imu_csv_writer = csv.writer(self.imu_csv_file)
@@ -41,23 +46,56 @@ class DataLoggerNode(Node):
             depth=10 
         )
 
-        # --- Subskrypcje (bez synchronizacji) ---
-        self.gps_subscription = self.create_subscription(
+        # --- Subskrypcje z synchronizacją ---
+        self.gps_subscription = message_filters.Subscriber(
+            self,
             GpsRtk,
             '/gps_rtk_data',
-            self.gps_callback,
             qos_profile=sensor_qos_profile)
         
+        self.servo_target_subscription = message_filters.Subscriber(
+            self,
+            StampedInt32,
+            '/servo/set_angle',
+            qos_profile=sensor_qos_profile)
+
+        self.servo_position_subscription = message_filters.Subscriber(
+            self,
+            StampedInt32,
+            '/servo/position',
+            qos_profile=sensor_qos_profile)
+        
+        # Synchronizator - ok. 10ms tolerancji na różnicę w stemplach czasowych
+        self.time_synchronizer = message_filters.ApproximateTimeSynchronizer(
+            [self.gps_subscription, self.servo_target_subscription, self.servo_position_subscription],
+            queue_size=10,
+            slop=0.01)
+        
+        self.time_synchronizer.registerCallback(self.sync_callback)
+
+        # Subskrypcja dla IMU (bez synchronizacji)
         self.imu_subscription = self.create_subscription(
             Imu,
             '/imu/data_raw',
             self.imu_callback,
             qos_profile=sensor_qos_profile)
 
-    def gps_callback(self, msg):
-        timestamp = msg.header.stamp
-        self.gps_csv_writer.writerow([timestamp.sec, timestamp.nanosec, msg.rtk_status, msg.latitude_deg, msg.longitude_deg, msg.altitude_m, msg.speed_mps, msg.heading_deg])
-        self.gps_csv_file.flush()
+    def sync_callback(self, gps_msg, servo_target_msg, servo_position_msg):
+        """Callback dla zsynchronizowanych danych."""
+        timestamp = gps_msg.header.stamp
+        self.sync_csv_writer.writerow([
+            timestamp.sec,
+            timestamp.nanosec,
+            gps_msg.rtk_status,
+            gps_msg.latitude_deg,
+            gps_msg.longitude_deg,
+            gps_msg.altitude_m,
+            gps_msg.speed_mps,
+            gps_msg.heading_deg,
+            servo_target_msg.data,
+            servo_position_msg.data
+        ])
+        self.sync_csv_file.flush()
 
     def imu_callback(self, msg):
         timestamp = msg.header.stamp
@@ -66,7 +104,7 @@ class DataLoggerNode(Node):
 
     def destroy_node(self):
         self.get_logger().info('Zamykanie plików logów.')
-        if self.gps_csv_file: self.gps_csv_file.close()
+        if self.sync_csv_file: self.sync_csv_file.close()
         if self.imu_csv_file: self.imu_csv_file.close()
         super().destroy_node()
 

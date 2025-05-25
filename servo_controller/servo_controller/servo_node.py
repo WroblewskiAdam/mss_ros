@@ -1,6 +1,9 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int32
+# from std_msgs.msg import Int32
+from my_robot_interfaces.msg import StampedInt32
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+
 
 from adafruit_servokit import ServoKit
 import time
@@ -12,7 +15,7 @@ class ServoController(Node):
         # --- Parametry i stałe ---
         self.SERVO_SPEED_DEGPS = 750.0  # Prędkość serwa w stopniach/sekundę
         MOVEMENT_FREQUENCY = 100.0      # Częstotliwość pętli ruchu (wysoka dla płynności)
-        PUBLISH_FREQUENCY = 20.0        # Docelowa częstotliwość publikowania pozycji
+        PUBLISH_FREQUENCY = 50.0        # Docelowa częstotliwość publikowania pozycji
 
         # --- Zmienne stanu ---
         self.current_simulated_angle = 0.0
@@ -29,15 +32,27 @@ class ServoController(Node):
         self.servo_channel = 0
         self.kit.servo[self.servo_channel].set_pulse_width_range(500, 2500)
         
+        # Definicja profilu QoS
+        sensor_qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+
         # --- Subskrypcja ---
         self.subscription = self.create_subscription(
-            Int32,
+            StampedInt32,
             'servo/set_angle',
             self.set_target_angle_callback,
-            10)
+            qos_profile=sensor_qos_profile
+        )
         
         # --- Publisher ---
-        self.position_publisher = self.create_publisher(Int32, 'servo/position', 10)
+        self.position_publisher = self.create_publisher(
+            StampedInt32, 
+            'servo/position', 
+            qos_profile=sensor_qos_profile # Użyj profilu
+        )
         
         # === NOWA ARCHITEKTURA: DWA TIMERY ===
         # 1. Timer do obliczania RUCHU serwa (wysoka częstotliwość)
@@ -66,7 +81,7 @@ class ServoController(Node):
         """Callback dla /servo/set_angle. Ustawia tylko cel."""
         target_angle = msg.data
         if 0 <= target_angle <= 180:
-            self.get_logger().info(f"Received command. New target: {target_angle} degrees.")
+            # self.get_logger().info(f"Received command. New target: {target_angle} degrees.")
             self.target_angle = float(target_angle)
         else:
             self.get_logger().warn(f"Received angle {target_angle} out of bounds (0-180). Ignoring command.")
@@ -95,7 +110,8 @@ class ServoController(Node):
         Pętla PUBLIKOWANIA. Działa zawsze z zadaną częstotliwością.
         Pobiera ostatni obliczony kąt i go publikuje.
         """
-        msg = Int32()
+        msg = StampedInt32()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.data = int(round(self.current_simulated_angle))
         self.position_publisher.publish(msg)
 
