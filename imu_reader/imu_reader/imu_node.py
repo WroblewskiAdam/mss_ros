@@ -32,11 +32,10 @@ class IMUPublisher(Node):
         except Exception as e:
             self.get_logger().error(f'Nie można zainicjalizować czujnika BNO08x: {e}')
             self.get_logger().error('Upewnij się, że czujnik jest poprawnie podłączony i adres I2C jest prawidłowy.')
-            # Zatrzymujemy działanie, jeśli nie ma czujnika
             rclpy.shutdown()
             return
         
-        time.sleep(1) # Czas na stabilizację czujnika
+        time.sleep(1)
 
         # --- Włączanie odczytów z czujnika ---
         self.get_logger().info('Włączanie funkcji czujnika (akcelerometr, żyroskop, magnetometr, wektor rotacji)...')
@@ -51,7 +50,7 @@ class IMUPublisher(Node):
         sensor_qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             history=QoSHistoryPolicy.KEEP_LAST,
-            depth=10  # Bufor na 10 wiadomości
+            depth=10
         )
 
         # --- Tworzenie publisherów ---
@@ -60,26 +59,51 @@ class IMUPublisher(Node):
         self.get_logger().info(f"Publikowanie danych IMU na temacie: '{self.imu_pub.topic_name}'")
         self.get_logger().info(f"Publikowanie danych magnetometru na temacie: '{self.mag_pub.topic_name}'")
 
-        # --- Tworzenie timera ---
-        timer_period = 0.01  # sekundy (dla częstotliwości 10 Hz)
-        self.timer = self.create_timer(timer_period, self.publish_data)
+        # --- Timer do publikacji danych (100 Hz) ---
+        timer_period = 0.01
+        self.data_timer = self.create_timer(timer_period, self.publish_data)
         self.get_logger().info(f'Utworzono timer do publikacji danych co {timer_period} s ({1/timer_period} Hz).')
+
+        # === NOWA SEKCJA: Timer do sprawdzania statusu kalibracji (co 5 sekund) ===
+        calibration_timer_period = 5.0
+        self.calibration_timer = self.create_timer(calibration_timer_period, self.log_calibration_status)
+        self.get_logger().info(f'Utworzono timer do logowania statusu kalibracji co {calibration_timer_period} s.')
+        # =========================================================================
+
         self.get_logger().info('Węzeł jest gotowy i rozpoczął publikowanie danych.')
 
+    # === NOWA FUNKCJA: Logowanie statusu kalibracji ===
+    def log_calibration_status(self):
+        """Odczytuje i loguje ogólny status kalibracji systemu."""
+        try:
+            # Odwołujemy się do jednej właściwości: 'calibration_status'
+            # Zwraca ona status dla całego systemu fuzji.
+            status = self.bno.calibration_status
+            
+            # Mapowanie numeru statusu (0-3) na czytelny opis
+            accuracy_map = {0: "Not calibrated", 1: "Low accuracy", 2: "Medium accuracy", 3: "High accuracy"}
+
+            # Logujemy tylko ogólny status
+            self.get_logger().info(
+                f"SYSTEM CALIBRATION STATUS: {accuracy_map.get(status, 'Unknown')} [{status}]"
+            )
+
+        except Exception as e:
+            # W razie gdyby nawet ta właściwość nie istniała, zobaczymy ten błąd
+            self.get_logger().warn(f"Nie można odczytać statusu kalibracji: {e}")
+    # ====================================================
 
     def publish_data(self):
-        # --- Odczyt danych z czujnika ---
+        # Ta funkcja pozostaje bez zmian
         accel = self.bno.acceleration
         gyro = self.bno.gyro
         quat = self.bno.quaternion
         mag = self.bno.magnetic
 
-        # Sprawdzenie, czy wszystkie dane są dostępne
         if None in (accel, gyro, quat, mag):
             self.get_logger().warn('Brak kompletu danych z IMU, pomijam publikację.')
             return
 
-        # --- Tworzenie wiadomości IMU ---
         imu_msg = Imu()
         imu_msg.header.stamp = self.get_clock().now().to_msg()
         imu_msg.header.frame_id = 'imu_link'
@@ -97,38 +121,29 @@ class IMUPublisher(Node):
         imu_msg.orientation.z = quat[2]
         imu_msg.orientation.w = quat[3]
 
-        # --- Tworzenie wiadomości magnetometru ---
         mag_msg = MagneticField()
-        mag_msg.header = imu_msg.header # Używamy tego samego stempla czasowego i ramki
+        mag_msg.header = imu_msg.header
         mag_msg.magnetic_field.x = mag[0]
         mag_msg.magnetic_field.y = mag[1]
         mag_msg.magnetic_field.z = mag[2]
 
-        # --- Publikacja wiadomości ---
         self.imu_pub.publish(imu_msg)
         self.mag_pub.publish(mag_msg)
         
-        # Log informacyjny o publikacji danych (można go zakomentować, jeśli generuje zbyt dużo logów)
-        # self.get_logger().info('Opublikowano dane z IMU i magnetometru.')
-        
-        # Bardziej szczegółowy log (używaj z poziomem DEBUG, aby nie zaśmiecać konsoli)
         self.get_logger().debug(f'Opublikowano: Quat W:{quat[3]:.2f}, Accel X:{accel[0]:.2f}, Gyro X:{gyro[0]:.2f}, Mag X:{mag[0]:.2f}')
 
 
 def main(args=None):
+    # Ta funkcja pozostaje bez zmian
     rclpy.init(args=args)
     
-    # Utworzenie węzła w bloku try-except, aby poprawnie obsłużyć błędy inicjalizacji
     try:
         node = IMUPublisher()
-        if rclpy.ok(): # Sprawdzenie, czy węzeł został poprawnie zainicjalizowany
+        if rclpy.ok():
             rclpy.spin(node)
     except Exception as e:
-        # Logowanie błędu, jeśli wystąpił podczas tworzenia węzła
-        # W tym przypadku logger węzła nie jest dostępny, więc używamy ogólnego
         rclpy.logging.get_logger('main').error(f'Wystąpił błąd krytyczny: {e}')
     finally:
-        # Ten blok wykona się zawsze, zapewniając czyste zamknięcie
         if 'node' in locals() and rclpy.ok():
             node.get_logger().info('Zamykanie węzła imu_publisher.')
             node.destroy_node()
