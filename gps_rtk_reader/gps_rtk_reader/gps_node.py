@@ -210,7 +210,7 @@ class GpsRtkNode(Node):
                     if self.last_gngga_to_ntrip_str and (time.time() - self.last_gngga_send_time > self.gngga_ntrip_interval):
                         if self.ntrip_socket:
                             try:
-                                self.get_logger().debug(f"NTRIP_UPDATE: Wysyłanie GNGGA: {self.last_gngga_to_ntrip_str.strip()}")
+                                self.get_logger().info(f"NTRIP_UPDATE: Wysyłanie GNGGA: {self.last_gngga_to_ntrip_str.strip()}")
                                 self.ntrip_socket.sendall(self.last_gngga_to_ntrip_str.encode('ascii'))
                                 self.last_gngga_send_time = time.time()
                             except socket.error as se_ntrip:
