@@ -12,7 +12,7 @@ from datetime import datetime, timezone # Do obsługi czasu
 
 # Zaimportuj swoją customową wiadomość
 # ZASTĄP 'twoj_pakiet_msgs.msg' i 'GpsRtk' właściwymi nazwami
-from gps_rtk_msgs.msg import GpsRtk # Przykład: from my_interfaces.msg import GpsData
+from my_robot_interfaces.msg import GpsRtk # Przykład: from my_interfaces.msg import GpsData
 
 
 class GpsRtkNode(Node):

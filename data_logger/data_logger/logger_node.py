@@ -7,8 +7,7 @@ import os
 from datetime import datetime
 
 from sensor_msgs.msg import Imu, MagneticField # <-- DODANY MagneticField
-from gps_rtk_msgs.msg import GpsRtk
-from my_robot_interfaces.msg import StampedInt32
+from my_robot_interfaces.msg import StampedInt32, GpsRtk
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
 class DataLoggerNode(Node):
