@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'servo_node = servo_controller.servo_node:main',
             'servo_teleop = servo_controller.servo_teleop_node:main',
+            'servo_profiler = servo_controller.servo_profiler_node:main',
         ],
     },
 )
