@@ -38,7 +38,7 @@ class SpeedTeleop(Node):
         self.input_thread.start()
 
         # Timer do okresowej publikacji, aby zapewnić, że ostatnia wartość jest wysyłana
-        self.publish_timer = self.create_timer(0.5, self.publish_speed)
+        self.publish_timer = self.create_timer(0.05, self.publish_speed)
 
 
     def publish_speed(self):
