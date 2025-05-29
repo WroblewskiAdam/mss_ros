@@ -33,4 +33,11 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True
         ),
+        Node(
+            package='speed_controller',
+            executable='speed_filter_node',
+            name='speed_filter_node',
+            output='screen',
+            emulate_tty=True,
+        ),
     ])
