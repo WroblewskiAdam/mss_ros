@@ -1,0 +1,6 @@
+analyzers:
+  communication:
+    type: GenericAnalyzer
+    path: Communication Links
+    contains:
+      - 'Bluetooth Link (@traktor)'
