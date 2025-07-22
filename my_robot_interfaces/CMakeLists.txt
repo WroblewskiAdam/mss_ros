@@ -17,6 +17,8 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/StampedInt32.msg"
   "msg/GpsRtk.msg"
+  "msg/DistanceMetrics.msg"
+  "msg/Gear.msg"
   DEPENDENCIES
     std_msgs
 )
