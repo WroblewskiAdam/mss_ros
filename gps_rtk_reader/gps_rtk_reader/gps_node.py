@@ -8,29 +8,25 @@ import base64
 import serial
 import threading
 import time
-from datetime import datetime, timezone # Do obsługi czasu
+from datetime import datetime, timezone
 
-# Zaimportuj swoją customową wiadomość
-# ZASTĄP 'twoj_pakiet_msgs.msg' i 'GpsRtk' właściwymi nazwami
-from my_robot_interfaces.msg import GpsRtk # Przykład: from my_interfaces.msg import GpsData
-
+from my_robot_interfaces.msg import GpsRtk
 
 class GpsRtkNode(Node):
     def __init__(self):
         super().__init__('gps_rtk_node')
 
-        # Deklaracja parametrów (z wartościami domyślnymi z Twojego skryptu)
-        self.declare_parameter('serial_port', '/dev/ttyUSB0') # Zmień na COM4 jeśli Windows, ale w ROS lepiej ścieżki Linuxowe
-        self.declare_parameter('baud_rate', 115200)
+        # Deklaracja i pobieranie parametrów (bez zmian)
+        self.declare_parameter('serial_port', '/dev/ttyUSB0')
+        self.declare_parameter('baud_rate', 460800)
         self.declare_parameter('ntrip_ip', 'system.asgeupos.pl')
         self.declare_parameter('ntrip_port', 8080)
         self.declare_parameter('ntrip_mountpoint', 'RTN4G_VRS_RTCM32') 
         self.declare_parameter('ntrip_user', 'pwmgr/adamwrb')
         self.declare_parameter('ntrip_password', 'Globus7142001')
-        self.declare_parameter('gngga_ntrip_interval', 10.0) # sekundy
-        self.declare_parameter('publish_frequency', 20.0) # Hz, jak często próbować publikować
+        self.declare_parameter('gngga_ntrip_interval', 10.0)
+        self.declare_parameter('publish_frequency', 20.0)
 
-        # Pobranie parametrów
         self.serial_port = self.get_parameter('serial_port').get_parameter_value().string_value
         self.baud_rate = self.get_parameter('baud_rate').get_parameter_value().integer_value
         self.ntrip_ip = self.get_parameter('ntrip_ip').get_parameter_value().string_value
@@ -41,29 +37,27 @@ class GpsRtkNode(Node):
         self.gngga_ntrip_interval = self.get_parameter('gngga_ntrip_interval').get_parameter_value().double_value
         self.publish_frequency = self.get_parameter('publish_frequency').get_parameter_value().double_value
 
-        # QoS dla danych sensorycznych
         qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT, # Dla sensorów często BEST_EFFORT jest OK
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
             history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1 # Chcemy najnowsze dane
+            depth=1
         )
         self.publisher_ = self.create_publisher(GpsRtk, 'gps_rtk_data', qos_profile)
 
-        # Zmienne do przechowywania ostatnich danych GPS
+        # Zaktualizowana struktura do przechowywania danych
         self.latest_gps_data = {
-            'gps_utc_time_str': None, # hhmmss.ss
-            'rtk_status': 0,        # Domyślnie brak fixa
+            'gps_utc_time_str': None,
+            'rtk_status': 0,
             'latitude_deg': 0.0,
             'longitude_deg': 0.0,
             'altitude_m': 0.0,
             'speed_mps': 0.0,
             'heading_deg': 0.0,
-            'timestamp_gngga': 0.0, # Czas ostatniej aktualizacji GNGGA
-            'timestamp_gnvtg': 0.0  # Czas ostatniej aktualizacji GNVTG
+            'timestamp_gngga': 0.0,
+            'timestamp_agric': 0.0  # <-- NOWOŚĆ: Czas ostatniej wiadomości AGRIC
         }
-        self.data_lock = threading.Lock() # Do ochrony self.latest_gps_data
+        self.data_lock = threading.Lock()
 
-        # Zmienne do obsługi NTRIP i portu szeregowego
         self.rtk_serial = None
         self.ntrip_socket = None
         self.gngga_for_ntrip_initial = None
@@ -71,7 +65,6 @@ class GpsRtkNode(Node):
         self.last_gngga_send_time = 0.0
         self.stop_threads_event = threading.Event()
 
-        # Inicjalizacja połączeń i wątków
         if self._initialize_serial() and self._initialize_ntrip():
             self.thread_rtk_reader = threading.Thread(target=self._rtk_reader_thread_func, daemon=True)
             self.thread_ntrip_reader = threading.Thread(target=self._ntrip_reader_thread_func, daemon=True)
@@ -80,12 +73,136 @@ class GpsRtkNode(Node):
             self.get_logger().info("Wątki RTK i NTRIP uruchomione.")
         else:
             self.get_logger().error("Inicjalizacja nie powiodła się. Node nie będzie działać poprawnie.")
-            # Można by tu rzucić wyjątek lub zamknąć node
 
-        # Timer do publikowania danych
         self.publish_timer = self.create_timer(1.0 / self.publish_frequency, self._publish_gps_data_callback)
         self.get_logger().info(f"GPS RTK Node uruchomiony. Publikowanie na '/gps_rtk_data' z częstotliwością {self.publish_frequency} Hz.")
+        self.get_logger().info("Node oczekuje teraz na wiadomości GNGGA oraz AGRIC.")
 
+    def _rtk_reader_thread_func(self):
+        """
+        Główny wątek odczytujący dane z portu szeregowego.
+        Parsuje wiadomości GNGGA (dla NTRIP i podstawowej pozycji) oraz AGRIC (dla precyzyjnego kursu i prędkości).
+        """
+        self.get_logger().info("Wątek czytnika RTK uruchomiony.")
+        while not self.stop_threads_event.is_set() and rclpy.ok():
+            try:
+                if not self.rtk_serial or not self.rtk_serial.is_open:
+                    self.get_logger().warn("Port szeregowy nie jest otwarty. Próba ponownego otwarcia za 5s.")
+                    time.sleep(5)
+                    if not self._initialize_serial(): continue
+                
+                line_bytes = self.rtk_serial.readline()
+                if line_bytes:
+                    decoded_line = line_bytes.decode('ascii', errors='ignore').strip()
+                    if not decoded_line: continue
+
+                    current_host_time = self.get_clock().now().nanoseconds / 1e9
+
+                    with self.data_lock:
+                        if decoded_line.startswith("$GNGGA"):
+                            parts = decoded_line.split(',')
+                            if len(parts) > 9:
+                                try:
+                                    self.latest_gps_data['gps_utc_time_str'] = parts[1]
+                                    self.latest_gps_data['latitude_deg'] = self._nmea_to_decimal_degrees(parts[2], parts[3])
+                                    self.latest_gps_data['longitude_deg'] = self._nmea_to_decimal_degrees(parts[4], parts[5])
+                                    self.latest_gps_data['rtk_status'] = int(parts[6]) if parts[6] else 0
+                                    self.latest_gps_data['altitude_m'] = float(parts[9]) if parts[9] else 0.0
+                                    self.latest_gps_data['timestamp_gngga'] = current_host_time
+                                    self.last_gngga_to_ntrip_str = decoded_line + "\r\n"
+                                except (ValueError, IndexError) as e:
+                                    self.get_logger().warn(f"Błąd parsowania GNGGA '{decoded_line}': {e}")
+                        
+                        # --- NOWA LOGIKA PARSOWANIA WIADOMOŚCI AGRIC ---
+                        elif decoded_line.startswith("#AGRICA"):
+                            try:
+                                # Wiadomość ma format: #HEADER;DATA*CRC
+                                # Dzielimy najpierw po ';', bierzemy drugą część, a następnie dzielimy po ','
+                                data_part = decoded_line.split(';')[1].split('*')[0]
+                                agric_parts = data_part.split(',')
+                                
+                                # Zgodnie z dokumentacją (Tabela 7-82) [cite: 77, 842-846]
+                                # Indeksy są przesunięte o -2 względem ID w tabeli.
+                                # ID 21: Heading -> indeks 19
+                                # ID 24: Speed (scalar) -> indeks 22
+                                heading_status = int(agric_parts[11 - 2])
+                                if heading_status in [4, 5]: # Tylko jeśli status to FIXED lub FLOAT
+                                    self.latest_gps_data['heading_deg'] = float(agric_parts[21 - 2])
+                                    # Prędkość w AGRIC jest w km/h, potrzebujemy m/s
+                                    speed_kmh = float(agric_parts[24 - 2])
+                                    self.latest_gps_data['speed_mps'] = speed_kmh * (1000.0 / 3600.0)
+                                    self.latest_gps_data['timestamp_agric'] = current_host_time
+                                else:
+                                    self.get_logger().warn(f"Otrzymano AGRIC, ale status kursu ('{heading_status}') nie jest poprawny. Ignoruję kurs.", throttle_duration_sec=5)
+                            except (ValueError, IndexError) as e:
+                                self.get_logger().warn(f"Błąd parsowania AGRIC '{decoded_line}': {e}")
+                        # --- KONIEC NOWEJ LOGIKI ---
+
+                    if self.last_gngga_to_ntrip_str and (time.time() - self.last_gngga_send_time > self.gngga_ntrip_interval):
+                        if self.ntrip_socket:
+                            try:
+                                self.get_logger().info(f"NTRIP_UPDATE: Wysyłanie GNGGA: {self.last_gngga_to_ntrip_str.strip()}")
+                                self.ntrip_socket.sendall(self.last_gngga_to_ntrip_str.encode('ascii'))
+                                self.last_gngga_send_time = time.time()
+                            except socket.error as se_ntrip:
+                                self.get_logger().error(f"Błąd gniazda podczas wysyłania GNGGA do NTRIP: {se_ntrip}")
+                                self.ntrip_socket.close()
+                                self.ntrip_socket = None
+                                if not self._initialize_ntrip():
+                                    self.get_logger().warn("Ponowna inicjalizacja NTRIP nie powiodła się.")
+                            except Exception as e:
+                                self.get_logger().error(f"Inny błąd wysyłania GNGGA: {e}")
+                        else:
+                            self.get_logger().warn("Próba wysłania GNGGA, ale gniazdo NTRIP nie jest aktywne. Próba re-inicjalizacji.")
+                            if not self._initialize_ntrip():
+                                self.get_logger().warn("Ponowna inicjalizacja NTRIP nie powiodła się.")
+
+            except serial.SerialException as e:
+                self.get_logger().error(f"Błąd portu szeregowego w wątku RTK: {e}")
+                if self.rtk_serial and self.rtk_serial.is_open: self.rtk_serial.close()
+                self.rtk_serial = None
+                time.sleep(5)
+            except Exception as e:
+                self.get_logger().error(f"Nieoczekiwany błąd w wątku RTK: {e}", exc_info=True)
+                time.sleep(1)
+        self.get_logger().info("Wątek czytnika RTK zakończony.")
+    
+    # Pozostałe funkcje (_initialize_serial, _initialize_ntrip, _ntrip_reader_thread_func,
+    # _nmea_to_decimal_degrees, _convert_gps_utc_to_ros_time, destroy_node)
+    # pozostają BEZ ZMIAN. Skopiuj je z oryginalnego pliku.
+    
+    # Poniżej znajduje się tylko zmodyfikowana funkcja _publish_gps_data_callback
+    
+    def _publish_gps_data_callback(self):
+        msg = GpsRtk()
+        current_ros_time = self.get_clock().now()
+
+        with self.data_lock:
+            # Sprawdzamy świeżość danych z obu źródeł
+            time_since_gngga = current_ros_time.nanoseconds / 1e9 - self.latest_gps_data['timestamp_gngga']
+            time_since_agric = current_ros_time.nanoseconds / 1e9 - self.latest_gps_data['timestamp_agric']
+
+            # Publikujemy, tylko jeśli mamy aktualne dane z GNGGA (pozycja) i AGRIC (kurs)
+            if time_since_gngga < 2.0 and time_since_agric < 2.0:
+                msg.header.stamp = current_ros_time.to_msg()
+                msg.header.frame_id = "gps_link"
+
+                msg.gps_time = self._convert_gps_utc_to_ros_time(self.latest_gps_data['gps_utc_time_str'])
+                msg.rtk_status = self.latest_gps_data['rtk_status']
+                msg.latitude_deg = self.latest_gps_data['latitude_deg']
+                msg.longitude_deg = self.latest_gps_data['longitude_deg']
+                msg.altitude_m = self.latest_gps_data['altitude_m']
+                
+                # Używamy danych z wiadomości AGRIC
+                msg.speed_mps = self.latest_gps_data['speed_mps']
+                msg.heading_deg = self.latest_gps_data['heading_deg']
+
+                self.publisher_.publish(msg)
+            else:
+                 self.get_logger().debug(f"Czekam na świeże dane: GNGGA_age={time_since_gngga:.2f}s, AGRIC_age={time_since_agric:.2f}s")
+
+
+    # ... (reszta funkcji bez zmian - skopiuj je z oryginału) ...
     def _initialize_serial(self):
         self.get_logger().info(f"Otwieranie portu szeregowego {self.serial_port} z prędkością {self.baud_rate}...")
         try:
@@ -161,84 +278,6 @@ class GpsRtkNode(Node):
             if self.ntrip_socket: self.ntrip_socket.close()
             return False
 
-    def _rtk_reader_thread_func(self):
-        self.get_logger().info("Wątek czytnika RTK uruchomiony.")
-        while not self.stop_threads_event.is_set() and rclpy.ok():
-            try:
-                if not self.rtk_serial or not self.rtk_serial.is_open:
-                    self.get_logger().warn("Port szeregowy nie jest otwarty. Próba ponownego otwarcia za 5s.")
-                    time.sleep(5)
-                    if not self._initialize_serial(): continue # Spróbuj ponownie otworzyć
-                
-                line_bytes = self.rtk_serial.readline()
-                if line_bytes:
-                    decoded_line = line_bytes.decode('ascii', errors='ignore').strip()
-                    if not decoded_line: continue
-
-                    current_host_time = self.get_clock().now().nanoseconds / 1e9 # Czas ROS
-                    parts = decoded_line.split(',')
-                    msg_type = parts[0]
-
-                    with self.data_lock:
-                        if msg_type == "$GNGGA" and len(parts) > 9:
-                            try:
-                                self.latest_gps_data['gps_utc_time_str'] = parts[1]
-                                self.latest_gps_data['latitude_deg'] = self._nmea_to_decimal_degrees(parts[2], parts[3])
-                                self.latest_gps_data['longitude_deg'] = self._nmea_to_decimal_degrees(parts[4], parts[5])
-                                self.latest_gps_data['rtk_status'] = int(parts[6]) if parts[6] else 0
-                                self.latest_gps_data['altitude_m'] = float(parts[9]) if parts[9] else 0.0
-                                self.latest_gps_data['timestamp_gngga'] = current_host_time
-                                self.last_gngga_to_ntrip_str = decoded_line + "\r\n" # Aktualizuj GNGGA do wysyłania
-                            except (ValueError, IndexError) as e:
-                                self.get_logger().warn(f"Błąd parsowania GNGGA '{decoded_line}': {e}")
-
-                        elif msg_type == "$GNVTG" and len(parts) > 7:
-                            try:
-                                # Prędkość w km/h (parts[7]), chcemy m/s
-                                speed_kph = float(parts[7]) if parts[7] and parts[8].upper() == 'K' else 0.0
-                                self.latest_gps_data['speed_mps'] = speed_kph * (1000.0 / 3600.0)
-                                # Kurs (heading)
-                                self.latest_gps_data['heading_deg'] = float(parts[1]) if parts[1] and parts[2].upper() == 'T' else 0.0
-                                self.latest_gps_data['timestamp_gnvtg'] = current_host_time
-                            except (ValueError, IndexError) as e:
-                                self.get_logger().warn(f"Błąd parsowania GNVTG '{decoded_line}': {e}")
-                        # Możesz tu dodać logowanie innych wiadomości NMEA jeśli chcesz
-                        # self.get_logger().debug(f"NMEA: {decoded_line}")
-
-
-                    # Okresowe wysyłanie GNGGA do NTRIP
-                    if self.last_gngga_to_ntrip_str and (time.time() - self.last_gngga_send_time > self.gngga_ntrip_interval):
-                        if self.ntrip_socket:
-                            try:
-                                self.get_logger().info(f"NTRIP_UPDATE: Wysyłanie GNGGA: {self.last_gngga_to_ntrip_str.strip()}")
-                                self.ntrip_socket.sendall(self.last_gngga_to_ntrip_str.encode('ascii'))
-                                self.last_gngga_send_time = time.time()
-                            except socket.error as se_ntrip:
-                                self.get_logger().error(f"Błąd gniazda podczas wysyłania GNGGA do NTRIP: {se_ntrip}")
-                                # Można rozważyć próbę ponownego połączenia z NTRIP
-                                self.ntrip_socket.close() # Zamknij gniazdo, aby wymusić próbę re-inicjalizacji
-                                self.ntrip_socket = None 
-                                if not self._initialize_ntrip():
-                                     self.get_logger().warn("Ponowna inicjalizacja NTRIP nie powiodła się.")
-                            except Exception as e:
-                                self.get_logger().error(f"Inny błąd wysyłania GNGGA: {e}")
-                        else:
-                            self.get_logger().warn("Próba wysłania GNGGA, ale gniazdo NTRIP nie jest aktywne. Próba re-inicjalizacji.")
-                            if not self._initialize_ntrip(): # Jeśli gniazdo zostało zamknięte
-                                self.get_logger().warn("Ponowna inicjalizacja NTRIP nie powiodła się.")
-
-
-            except serial.SerialException as e:
-                self.get_logger().error(f"Błąd portu szeregowego w wątku RTK: {e}")
-                if self.rtk_serial and self.rtk_serial.is_open: self.rtk_serial.close()
-                self.rtk_serial = None # Wymuś re-inicjalizację
-                time.sleep(5) # Odczekaj przed próbą ponownego połączenia
-            except Exception as e:
-                self.get_logger().error(f"Nieoczekiwany błąd w wątku RTK: {e}", exc_info=True)
-                time.sleep(1) # Krótka pauza
-        self.get_logger().info("Wątek czytnika RTK zakończony.")
-
-
     def _ntrip_reader_thread_func(self):
         self.get_logger().info("Wątek czytnika NTRIP uruchomiony.")
         while not self.stop_threads_event.is_set() and rclpy.ok():
@@ -299,66 +338,31 @@ class GpsRtkNode(Node):
             return 0.0
 
     def _convert_gps_utc_to_ros_time(self, utc_time_str):
-        """Konwertuje czas UTC z GNGGA (hhmmss.ss) na ROS Time (builtin_interfaces.msg.Time)"""
         if not utc_time_str or '.' not in utc_time_str:
-            return self.get_clock().now().to_msg() # Zwróć aktualny czas ROS jako fallback
+            return self.get_clock().now().to_msg() 
 
         try:
-            # Użyj dzisiejszej daty systemowej UTC, połącz z czasem GPS
             now_utc = datetime.now(timezone.utc)
             
             hour = int(utc_time_str[0:2])
             minute = int(utc_time_str[2:4])
             second = int(utc_time_str[4:6])
             subsecond_str = utc_time_str.split('.')[1]
-            nanosecond = int(subsecond_str.ljust(9, '0')[:9]) # Uzupełnij do 9 cyfr dla nanosekund
+            nanosecond = int(subsecond_str.ljust(9, '0')[:9])
 
-            # Stwórz obiekt datetime z dzisiejszą datą i czasem GPS
             gps_datetime = now_utc.replace(hour=hour, minute=minute, second=second, microsecond=nanosecond // 1000, tzinfo=timezone.utc)
             
-            ros_time = GpsRtk().header.stamp # Uzyskaj pusty obiekt Time
+            ros_time = GpsRtk().header.stamp
             ros_time.sec = int(gps_datetime.timestamp())
-            ros_time.nanosec = gps_datetime.microsecond * 1000 # nanosecond od początku sekundy
+            ros_time.nanosec = gps_datetime.microsecond * 1000
             return ros_time
         except ValueError as e:
             self.get_logger().warn(f"Błąd konwersji czasu GPS UTC '{utc_time_str}': {e}")
             return self.get_clock().now().to_msg()
 
-
-    def _publish_gps_data_callback(self):
-        msg = GpsRtk()
-        current_ros_time = self.get_clock().now()
-
-        with self.data_lock:
-            # Sprawdź świeżość danych (np. nie starsze niż 0.5 sekundy)
-            # To ważne, bo GNGGA i GNVTG mogą przychodzić z lekkim opóźnieniem względem siebie.
-            # Tutaj uproszczenie - publikujemy jeśli GNGGA jest dostępne.
-            # W bardziej zaawansowanym podejściu można czekać na oba "świeże" komunikaty.
-            if self.latest_gps_data['timestamp_gngga'] > 0: # Jeśli GNGGA było kiedykolwiek odebrane
-                msg.header.stamp = current_ros_time.to_msg()
-                msg.header.frame_id = "gps_link" # lub inna odpowiednia ramka odniesienia
-
-                msg.gps_time = self._convert_gps_utc_to_ros_time(self.latest_gps_data['gps_utc_time_str'])
-                msg.rtk_status = self.latest_gps_data['rtk_status']
-                msg.latitude_deg = self.latest_gps_data['latitude_deg']
-                msg.longitude_deg = self.latest_gps_data['longitude_deg']
-                msg.altitude_m = self.latest_gps_data['altitude_m']
-                
-                # Użyj danych z GNVTG jeśli są świeże, w przeciwnym razie mogą być zerowe lub stare
-                # Dla uproszczenia zakładamy, że jeśli GNGGA jest, to GNVTG też wkrótce będzie
-                # i używamy ostatniej znanej wartości.
-                msg.speed_mps = self.latest_gps_data['speed_mps']
-                msg.heading_deg = self.latest_gps_data['heading_deg']
-
-                self.publisher_.publish(msg)
-                # self.get_logger().debug(f"Opublikowano dane GPS: Lat {msg.latitude_deg}, Lon {msg.longitude_deg}")
-            # else:
-                # self.get_logger().debug("Brak danych GNGGA do opublikowania.")
-
-
     def destroy_node(self):
         self.get_logger().info("Zamykanie node'a GPS RTK...")
-        self.stop_threads_event.set() # Sygnalizuj wątkom, aby się zakończyły
+        self.stop_threads_event.set()
 
         if hasattr(self, 'thread_rtk_reader') and self.thread_rtk_reader.is_alive():
             self.thread_rtk_reader.join(timeout=2.0)
@@ -371,13 +375,12 @@ class GpsRtkNode(Node):
         if self.ntrip_socket:
             try:
                 self.ntrip_socket.shutdown(socket.SHUT_RDWR)
-            except socket.error: pass # Ignoruj, jeśli już zamknięte
+            except socket.error: pass
             self.ntrip_socket.close()
             self.get_logger().info("Połączenie NTRIP zamknięte.")
         
         super().destroy_node()
         self.get_logger().info("Node GPS RTK zamknięty.")
-
 
 def main(args=None):
     rclpy.init(args=args)
