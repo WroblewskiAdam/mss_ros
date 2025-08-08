@@ -5,11 +5,11 @@ from my_robot_interfaces.msg import Gear
 import RPi.GPIO as GPIO
 
 # --- Konfiguracja pinów GPIO ---
-PIN_CLUTCH = 5   # Sprzęgło
-PIN_GEAR_1 = 6   # Bieg 1
+PIN_CLUTCH = 26   # Sprzęgło
+PIN_GEAR_1 = 19  # Bieg 1
 PIN_GEAR_2 = 13  # Bieg 2
-PIN_GEAR_3 = 19  # Bieg 3
-PIN_GEAR_4 = 26  # Bieg 4
+PIN_GEAR_3 = 5  # Bieg 3
+PIN_GEAR_4 = 6  # Bieg 4
 
 class GearReaderNode(Node):
     """
