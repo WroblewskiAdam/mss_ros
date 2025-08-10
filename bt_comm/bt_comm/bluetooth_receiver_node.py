@@ -14,7 +14,7 @@ class BluetoothReceiverNode(Node):
     def __init__(self):
         super().__init__('bluetooth_receiver_node')
         
-        self.declare_parameter('bt_port', 4)
+        self.declare_parameter('bt_port', 1)
         self.declare_parameter('publish_topic', '/gps_rtk_data/chopper')
 
         self.port = self.get_parameter('bt_port').get_parameter_value().integer_value
