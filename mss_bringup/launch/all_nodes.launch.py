@@ -12,13 +12,13 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True
         ),
-        Node(
-            package='imu_reader',
-            executable='imu_node',
-            name='imu_publisher',
-            output='screen',
-            emulate_tty=True
-        ),
+        # Node(
+        #     package='imu_reader',
+        #     executable='imu_node',
+        #     name='imu_publisher',
+        #     output='screen',
+        #     emulate_tty=True
+        # ),
         Node(
             package='servo_controller',
             executable='servo_node',
@@ -37,6 +37,13 @@ def generate_launch_description():
             package='speed_controller',
             executable='speed_filter_node',
             name='speed_filter_node',
+            output='screen',
+            emulate_tty=True,
+        ),
+        Node(
+            package='gear_reader',
+            executable='gear_reader_node',
+            name='gear_reader_node',
             output='screen',
             emulate_tty=True,
         ),
