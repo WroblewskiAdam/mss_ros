@@ -130,7 +130,7 @@ class GpsRtkNode(Node):
                                     self.latest_gps_data['heading_deg'] = float(agric_parts[21 - 2])
                                     # Prędkość w AGRIC jest w km/h, potrzebujemy m/s
                                     speed_kmh = float(agric_parts[24 - 2])
-                                    self.latest_gps_data['speed_mps'] = speed_kmh * (1000.0 / 3600.0)
+                                    self.latest_gps_data['speed_mps'] = speed_kmh
                                     self.latest_gps_data['timestamp_agric'] = current_host_time
                                 else:
                                     self.get_logger().warn(f"Otrzymano AGRIC, ale status kursu ('{heading_status}') nie jest poprawny. Ignoruję kurs.", throttle_duration_sec=5)
