@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/GpsRtk.msg"
   "msg/DistanceMetrics.msg"
   "msg/Gear.msg"
+  "msg/DiagnosticData.msg"
   DEPENDENCIES
     std_msgs
 )

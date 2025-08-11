@@ -6,7 +6,6 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 import message_filters
 import numpy as np
 # Upewnij się, że nazwa pakietu z wiadomościami jest poprawna
-# Jeśli nazywa się 'mss_msgs', zmień poniższą linię
 from my_robot_interfaces.msg import GpsRtk, DistanceMetrics 
 
 class RelativeComputerNode(Node):
@@ -23,21 +22,15 @@ class RelativeComputerNode(Node):
         self.declare_parameter('chopper_gps_topic', '/gps_rtk_data/chopper')
         self.declare_parameter('distance_metrics_topic', '/distance_metrics')
         self.declare_parameter('earth_radius_m', 6371000.0)
-        # --- [ZMIANA] Usunięto niepotrzebny parametr progu prędkości ---
-        # self.declare_parameter('heading_speed_threshold_ms', 0.1)
 
         tractor_topic = self.get_parameter('tractor_gps_topic').get_parameter_value().string_value
         chopper_topic = self.get_parameter('chopper_gps_topic').get_parameter_value().string_value
         metrics_topic = self.get_parameter('distance_metrics_topic').get_parameter_value().string_value
         self.R_EARTH = self.get_parameter('earth_radius_m').get_parameter_value().double_value
-        # --- [ZMIANA] Usunięto wczytywanie progu prędkości ---
-        # self.heading_speed_threshold = self.get_parameter('heading_speed_threshold_ms').get_parameter_value().double_value
 
         self.origin_lat_rad = None
         self.origin_lon_rad = None
         self.is_origin_set = False
-        # --- [ZMIANA] Usunięto zmienną do przechowywania ostatniego kursu ---
-        # self.last_valid_chopper_heading_deg = None
 
         sensor_qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
@@ -70,15 +63,12 @@ class RelativeComputerNode(Node):
 
     def synchronized_callback(self, tractor_msg, chopper_msg):
         if not self.is_origin_set:
-            # W dokumentacji Twojej wiadomości GpsRtk jest 'latitude_deg', jeśli to inna nazwa, popraw ją tutaj
             self.origin_lat_rad = np.deg2rad(chopper_msg.latitude_deg)
             self.origin_lon_rad = np.deg2rad(chopper_msg.longitude_deg)
             self.is_origin_set = True
             self.get_logger().info(f"Ustawiono punkt odniesienia ENU na: Lat={chopper_msg.latitude_deg}, Lon={chopper_msg.longitude_deg}")
             return
 
-        # --- [ZMIANA] Cała logika stabilizacji kursu została usunięta ---
-        # Bezpośrednio używamy kursu z wiadomości, ponieważ jest on zawsze wiarygodny.
         heading_to_use_deg = chopper_msg.heading_deg
 
         tractor_pos_enu = self.latlon_to_enu(tractor_msg.latitude_deg, tractor_msg.longitude_deg)
@@ -95,6 +85,10 @@ class RelativeComputerNode(Node):
 
         metrics_msg = DistanceMetrics()
         
+        # === ZMIANA: Dodajemy znacznik czasu ===
+        metrics_msg.header.stamp = self.get_clock().now().to_msg()
+        # ======================================
+
         # Rzutowanie na standardowy typ float
         metrics_msg.distance_straight = float(dist_straight)
         metrics_msg.distance_longitudinal = float(dist_longitudinal)

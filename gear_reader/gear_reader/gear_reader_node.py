@@ -5,10 +5,10 @@ from my_robot_interfaces.msg import Gear
 import RPi.GPIO as GPIO
 
 # --- Konfiguracja pinów GPIO ---
-PIN_CLUTCH = 5   # Sprzęgło
+PIN_CLUTCH = 26   # Sprzęgło
 PIN_GEAR_1 = 19  # Bieg 1
 PIN_GEAR_2 = 13  # Bieg 2
-PIN_GEAR_3 = 26  # Bieg 3
+PIN_GEAR_3 = 5  # Bieg 3
 PIN_GEAR_4 = 6  # Bieg 4
 
 class GearReaderNode(Node):
@@ -65,7 +65,11 @@ class GearReaderNode(Node):
         # Stworzenie instancji naszej nowej wiadomości
         msg = Gear()
         
-        # Wypełnienie pól wiadomości - kod jest teraz bardzo czytelny
+        # === ZMIANA: Dodajemy znacznik czasu ===
+        msg.header.stamp = self.get_clock().now().to_msg()
+        # ======================================
+        
+        # Wypełnienie pól wiadomości
         msg.gear = self.read_gear_state()
         msg.clutch_state = self.read_clutch_state()
         

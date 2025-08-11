@@ -1,4 +1,5 @@
 # my_robot_interfaces/msg/DistanceMetrics.msg
+std_msgs/Header header
 
 # Odległość w linii prostej (euklidesowa) między pojazdami w metrach.
 float64 distance_straight
