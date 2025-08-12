@@ -6,7 +6,9 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from std_msgs.msg import Float64
 from my_robot_interfaces.msg import GpsRtk, Gear, DistanceMetrics, StampedInt32, DiagnosticData
 
-# Wartość, która będzie wstawiana w miejsce niedostępnych danych
+# === ZMIANA: Używamy wartości, która pasuje do uint8 ===
+PLACEHOLDER_UINT8 = 255 
+# ======================================================
 PLACEHOLDER_INT = 99999
 PLACEHOLDER_FLOAT = 99999.0
 
@@ -40,7 +42,6 @@ class DiagnosticsNode(Node):
         self.diag_publisher = self.create_publisher(DiagnosticData, '/diagnostics', 10)
 
         # --- Indywidualni subskrybenci ---
-        # Każdy ma swój własny callback, który tylko zapisuje ostatnią wiadomość
         self.create_subscription(GpsRtk, '/gps_rtk_data_filtered', self.tractor_gps_callback, qos_profile)
         self.create_subscription(GpsRtk, '/gps_rtk_data/chopper', self.chopper_gps_callback, qos_profile)
         self.create_subscription(StampedInt32, '/servo/position', self.servo_pos_callback, qos_profile)
@@ -49,7 +50,6 @@ class DiagnosticsNode(Node):
         self.create_subscription(DistanceMetrics, '/distance_metrics', self.relative_pos_callback, qos_profile)
 
         # --- Główna pętla (Timer) ---
-        # Ta funkcja będzie teraz sercem węzła
         self.timer = self.create_timer(1.0 / publish_frequency, self.main_loop_callback)
 
         self.get_logger().info(f'Odporny węzeł diagnostyczny uruchomiony. Publikuje z f={publish_frequency} Hz.')
@@ -68,11 +68,10 @@ class DiagnosticsNode(Node):
         if msg is None:
             return False
         
-        # Pobierz czas obecny i czas wiadomości
         current_time_sec = self.get_clock().now().nanoseconds / 1e9
+        # W ROS2 `header` jest w `msg`, a `stamp` jest w `header`.
         msg_time_sec = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
         
-        # Sprawdź różnicę
         return (current_time_sec - msg_time_sec) < self.data_timeout
 
     def main_loop_callback(self):
@@ -85,8 +84,8 @@ class DiagnosticsNode(Node):
         if self.is_data_fresh(self.last_tractor_gps):
             diag_msg.tractor_gps_filtered = self.last_tractor_gps
         else:
-            # Tworzymy pustą wiadomość i wypełniamy wartościami domyślnymi
-            diag_msg.tractor_gps_filtered.rtk_status = PLACEHOLDER_INT
+            # === ZMIANA: Używamy poprawnej wartości zastępczej ===
+            diag_msg.tractor_gps_filtered.rtk_status = PLACEHOLDER_UINT8
             diag_msg.tractor_gps_filtered.speed_mps = PLACEHOLDER_FLOAT
             diag_msg.tractor_gps_filtered.heading_deg = PLACEHOLDER_FLOAT
 
@@ -96,7 +95,8 @@ class DiagnosticsNode(Node):
             diag_msg.bt_status = True
         else:
             diag_msg.bt_status = False
-            diag_msg.chopper_gps.rtk_status = PLACEHOLDER_INT
+            # === ZMIANA: Używamy poprawnej wartości zastępczej ===
+            diag_msg.chopper_gps.rtk_status = PLACEHOLDER_UINT8
             diag_msg.chopper_gps.speed_mps = PLACEHOLDER_FLOAT
             diag_msg.chopper_gps.heading_deg = PLACEHOLDER_FLOAT
 
@@ -105,21 +105,21 @@ class DiagnosticsNode(Node):
             diag_msg.servo_position = self.last_servo_pos
         else:
             diag_msg.servo_position.data = PLACEHOLDER_INT
-
+        
         # 4. Dane o biegach
-        if self.last_gear is not None: # Dla biegów nie sprawdzamy czasu, bo mogą się nie zmieniać
+        if self.is_data_fresh(self.last_gear):
             diag_msg.tractor_gear = self.last_gear
         else:
-            diag_msg.tractor_gear.gear = PLACEHOLDER_INT
-            diag_msg.tractor_gear.clutch_state = PLACEHOLDER_INT
-            
+            diag_msg.tractor_gear.gear = PLACEHOLDER_UINT8 # Bieg też jest małą liczbą
+            diag_msg.tractor_gear.clutch_state = PLACEHOLDER_UINT8
+
         # 5. Dane z systemu sterowania
-        if self.is_data_fresh(self.last_target_speed):
+        if self.last_target_speed is not None: # Prędkość zadawana może być stała, nie sprawdzamy czasu
             diag_msg.target_speed = self.last_target_speed
         else:
             diag_msg.target_speed.data = PLACEHOLDER_FLOAT
 
-        if self.last_relative_pos is not None: # Pozycja względna może być publikowana rzadziej
+        if self.is_data_fresh(self.last_relative_pos):
             diag_msg.relative_position = self.last_relative_pos
         else:
             diag_msg.relative_position.distance_straight = PLACEHOLDER_FLOAT
