@@ -2,22 +2,21 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
-# Importuj wszystkie potrzebne wiadomości
 from std_msgs.msg import Float64
 from my_robot_interfaces.msg import GpsRtk, Gear, DistanceMetrics, StampedInt32, DiagnosticData
+import math
 
-# === ZMIANA: Używamy wartości, która pasuje do uint8 ===
-PLACEHOLDER_UINT8 = 255 
-# ======================================================
-PLACEHOLDER_INT = 99999
-PLACEHOLDER_FLOAT = 99999.0
+# Wartości zastępcze
+PLACEHOLDER_UINT8 = 255
+PLACEHOLDER_INT = 255
+PLACEHOLDER_FLOAT = math.nan
 
 class DiagnosticsNode(Node):
     def __init__(self):
         super().__init__('diagnostics_node')
 
         # --- Parametry ---
-        self.declare_parameter('publish_frequency_hz', 10.0)
+        self.declare_parameter('publish_frequency_hz', 1.0)
         self.declare_parameter('data_timeout_sec', 1.5)
 
         publish_frequency = self.get_parameter('publish_frequency_hz').get_parameter_value().double_value
@@ -69,7 +68,6 @@ class DiagnosticsNode(Node):
             return False
         
         current_time_sec = self.get_clock().now().nanoseconds / 1e9
-        # W ROS2 `header` jest w `msg`, a `stamp` jest w `header`.
         msg_time_sec = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
         
         return (current_time_sec - msg_time_sec) < self.data_timeout
@@ -84,8 +82,11 @@ class DiagnosticsNode(Node):
         if self.is_data_fresh(self.last_tractor_gps):
             diag_msg.tractor_gps_filtered = self.last_tractor_gps
         else:
-            # === ZMIANA: Używamy poprawnej wartości zastępczej ===
+            # === POPRAWKA: Ustawiamy wszystkie pola ===
             diag_msg.tractor_gps_filtered.rtk_status = PLACEHOLDER_UINT8
+            diag_msg.tractor_gps_filtered.latitude_deg = PLACEHOLDER_FLOAT
+            diag_msg.tractor_gps_filtered.longitude_deg = PLACEHOLDER_FLOAT
+            diag_msg.tractor_gps_filtered.altitude_m = PLACEHOLDER_FLOAT
             diag_msg.tractor_gps_filtered.speed_mps = PLACEHOLDER_FLOAT
             diag_msg.tractor_gps_filtered.heading_deg = PLACEHOLDER_FLOAT
 
@@ -95,8 +96,11 @@ class DiagnosticsNode(Node):
             diag_msg.bt_status = True
         else:
             diag_msg.bt_status = False
-            # === ZMIANA: Używamy poprawnej wartości zastępczej ===
+            # === POPRAWKA: Ustawiamy wszystkie pola ===
             diag_msg.chopper_gps.rtk_status = PLACEHOLDER_UINT8
+            diag_msg.chopper_gps.latitude_deg = PLACEHOLDER_FLOAT
+            diag_msg.chopper_gps.longitude_deg = PLACEHOLDER_FLOAT
+            diag_msg.chopper_gps.altitude_m = PLACEHOLDER_FLOAT
             diag_msg.chopper_gps.speed_mps = PLACEHOLDER_FLOAT
             diag_msg.chopper_gps.heading_deg = PLACEHOLDER_FLOAT
 
@@ -110,11 +114,11 @@ class DiagnosticsNode(Node):
         if self.is_data_fresh(self.last_gear):
             diag_msg.tractor_gear = self.last_gear
         else:
-            diag_msg.tractor_gear.gear = PLACEHOLDER_UINT8 # Bieg też jest małą liczbą
+            diag_msg.tractor_gear.gear = PLACEHOLDER_UINT8 
             diag_msg.tractor_gear.clutch_state = PLACEHOLDER_UINT8
 
         # 5. Dane z systemu sterowania
-        if self.last_target_speed is not None: # Prędkość zadawana może być stała, nie sprawdzamy czasu
+        if self.last_target_speed is not None: # Prędkość zadawana może być stała
             diag_msg.target_speed = self.last_target_speed
         else:
             diag_msg.target_speed.data = PLACEHOLDER_FLOAT

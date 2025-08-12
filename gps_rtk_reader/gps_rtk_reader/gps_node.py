@@ -126,7 +126,7 @@ class GpsRtkNode(Node):
                                 # ID 21: Heading -> indeks 19
                                 # ID 24: Speed (scalar) -> indeks 22
                                 heading_status = int(agric_parts[11 - 2])
-                                if heading_status in [4, 5]: # Tylko jeśli status to FIXED lub FLOAT
+                                if heading_status in [0, 4, 5]: # Tylko jeśli status to FIXED lub FLOAT
                                     self.latest_gps_data['heading_deg'] = float(agric_parts[21 - 2])
                                     # Prędkość w AGRIC jest w km/h, potrzebujemy m/s
                                     speed_kmh = float(agric_parts[24 - 2])
