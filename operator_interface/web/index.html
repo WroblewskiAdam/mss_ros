@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSS Operator Interface</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="main-view" class="panel">
+        <h2>Wizualizacja Względna</h2>
+        <div id="viz-container">
+            <div id="chopper" title="Sieczkarnia"></div>
+            <div id="tractor" title="Ciągnik"></div>
+        </div>
+    </div>
+
+    <div id="sidebar" class="panel">
+        <div id="connection-status" class="status-bar status-off">ROZŁĄCZONO</div>
+        <div id="autopilot-status" class="status-bar status-off">AUTOPILOT WYŁĄCZONY</div>
+        <button id="toggle-autopilot-btn" class="btn-engage" disabled>AKTYWUJ AUTOPILOTA</button>
+        <hr>
+        <h3>Dane Systemu</h3>
+        <p><strong>Połączenie BT:</strong> <span id="bt_status" class="value-bad">BŁĄD</span></p>
+        <p><strong>RTK Ciągnika:</strong> <span id="tractor_rtk">---</span></p>
+        <p><strong>RTK Sieczkarni:</strong> <span id="chopper_rtk">---</span></p>
+        <hr>
+        <h3>Dane Względne</h3>
+        <p><strong>Wzdłużna:</strong> <span id="dist_long">---</span> m</p>
+        <!-- ZMIANA: Jednostka z cm na m -->
+        <p><strong>Poprzeczna:</strong> <span id="dist_lat">---</span> m</p>
+        <hr>
+        <h3>Ciągnik</h3>
+        <p><strong>Prędkość:</strong> <span id="tractor_speed">---</span> km/h</p>
+        <p><strong>Prędkość zadana:</strong> <span id="target_speed">---</span> km/h</p>
+        <p><strong>Półbieg:</strong> <span id="gear">---</span></p>
+        <p><strong>Sprzęgło:</strong> <span id="clutch">---</span></p>
+        <hr>
+        <h3>Pozycja GPS</h3>
+        <p><strong>Ciągnik Lat:</strong> <span id="tractor_lat">---</span></p>
+        <p><strong>Ciągnik Lon:</strong> <span id="tractor_lon">---</span></p>
+        <p><strong>Sieczkarnia Lat:</strong> <span id="chopper_lat">---</span></p>
+        <p><strong>Sieczkarnia Lon:</strong> <span id="chopper_lon">---</span></p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

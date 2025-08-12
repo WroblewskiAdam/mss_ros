@@ -1,0 +1,152 @@
+/* Plik: operator_interface/web/style.css */
+
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex; 
+    background-color: #282c34; 
+    color: #f1f1f1;
+    margin: 0;
+    padding: 5px;
+    height: 100vh;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.panel { 
+    border: 1px solid #444; 
+    border-radius: 12px; 
+    margin: 5px; 
+    padding: 20px; 
+    background-color: #3c4049;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+#main-view { 
+    flex-grow: 1; 
+}
+
+#sidebar { 
+    width: 320px;
+    flex-shrink: 0;
+}
+
+h2, h3 {
+    margin-top: 0;
+    border-bottom: 2px solid #555;
+    padding-bottom: 10px;
+    color: #61dafb;
+}
+
+p {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1em;
+    margin: 12px 0;
+}
+
+p > strong {
+    color: #aaa;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #555;
+    margin: 20px 0;
+}
+
+#viz-container { 
+    position: relative; 
+    width: 100%; 
+    height: 100%;
+    min-height: 400px;
+    background: 
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-color: #2c313a;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#chopper { 
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%); 
+    width: 30px; 
+    height: 60px; 
+    background-color: #ff9800; /* Orange */
+    border: 2px solid #222;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+#chopper::after {
+    content: 'S';
+    color: black;
+    font-weight: bold;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+
+#tractor { 
+    position: absolute; 
+    width: 25px; 
+    height: 40px; 
+    background-color: #4caf50; /* Green */
+    border: 2px solid #222;
+    border-radius: 4px;
+    transition: all 0.1s linear;
+    box-sizing: border-box;
+}
+#tractor::after {
+    content: 'C';
+    color: black;
+    font-weight: bold;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.status-bar { 
+    padding: 15px; 
+    margin-bottom: 15px; 
+    text-align: center; 
+    font-size: 1.4em;
+    font-weight: bold;
+    border-radius: 8px; 
+    transition: background-color 0.3s;
+}
+
+.status-on { background-color: #28a745; color: white; }
+.status-off { background-color: #dc3545; color: white; }
+
+button { 
+    width: 100%; 
+    padding: 20px; 
+    font-size: 1.3em;
+    font-weight: bold;
+    border-radius: 8px; 
+    border: none; 
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+button:active {
+    transform: scale(0.98);
+}
+button:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+.btn-engage { background-color: #007bff; color: white; }
+.btn-disengage { background-color: #ffc107; color: black; }
+
+.value-ok { color: #4caf50; font-weight: bold; }
+.value-bad { color: #ffc107; font-weight: bold; }
