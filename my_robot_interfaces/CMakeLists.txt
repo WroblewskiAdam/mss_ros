@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DistanceMetrics.msg"
   "msg/Gear.msg"
   "msg/DiagnosticData.msg"
+  "msg/SpeedControllerState.msg"
   DEPENDENCIES
     std_msgs
 )

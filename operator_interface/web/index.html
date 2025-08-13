@@ -5,43 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MSS Operator Interface</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Biblioteka do wykresów -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
-
-    <div id="main-view" class="panel">
-        <h2>Wizualizacja Względna</h2>
-        <div id="viz-container">
-            <div id="chopper" title="Sieczkarnia"></div>
-            <div id="tractor" title="Ciągnik"></div>
+    <div class="main-container">
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab(event, 'TabMain')">Główny</button>
+            <button class="tab-button" onclick="openTab(event, 'TabController')">Regulator</button>
+            <button class="tab-button" onclick="openTab(event, 'TabDetails')">Szczegóły</button>
         </div>
-    </div>
 
-    <div id="sidebar" class="panel">
-        <div id="connection-status" class="status-bar status-off">ROZŁĄCZONO</div>
-        <div id="autopilot-status" class="status-bar status-off">AUTOPILOT WYŁĄCZONY</div>
-        <button id="toggle-autopilot-btn" class="btn-engage" disabled>AKTYWUJ AUTOPILOTA</button>
-        <hr>
-        <h3>Dane Systemu</h3>
-        <p><strong>Połączenie BT:</strong> <span id="bt_status" class="value-bad">BŁĄD</span></p>
-        <p><strong>RTK Ciągnika:</strong> <span id="tractor_rtk">---</span></p>
-        <p><strong>RTK Sieczkarni:</strong> <span id="chopper_rtk">---</span></p>
-        <hr>
-        <h3>Dane Względne</h3>
-        <p><strong>Wzdłużna:</strong> <span id="dist_long">---</span> m</p>
-        <!-- ZMIANA: Jednostka z cm na m -->
-        <p><strong>Poprzeczna:</strong> <span id="dist_lat">---</span> m</p>
-        <hr>
-        <h3>Ciągnik</h3>
-        <p><strong>Prędkość:</strong> <span id="tractor_speed">---</span> km/h</p>
-        <p><strong>Prędkość zadana:</strong> <span id="target_speed">---</span> km/h</p>
-        <p><strong>Półbieg:</strong> <span id="gear">---</span></p>
-        <p><strong>Sprzęgło:</strong> <span id="clutch">---</span></p>
-        <hr>
-        <h3>Pozycja GPS</h3>
-        <p><strong>Ciągnik Lat:</strong> <span id="tractor_lat">---</span></p>
-        <p><strong>Ciągnik Lon:</strong> <span id="tractor_lon">---</span></p>
-        <p><strong>Sieczkarnia Lat:</strong> <span id="chopper_lat">---</span></p>
-        <p><strong>Sieczkarnia Lon:</strong> <span id="chopper_lon">---</span></p>
+        <!-- Zakładka Główna -->
+        <div id="TabMain" class="tab-content" style="display: flex;">
+            <div id="main-view" class="panel">
+                <h2>Wizualizacja Względna</h2>
+                <div id="viz-container">
+                    <div id="chopper" title="Sieczkarnia"></div>
+                    <div id="tractor" title="Ciągnik"></div>
+                </div>
+            </div>
+            <div id="sidebar" class="panel">
+                <div id="connection-status" class="status-bar status-off">ROZŁĄCZONO</div>
+                <div id="autopilot-status" class="status-bar status-off">AUTOPILOT WYŁĄCZONY</div>
+                <button id="toggle-autopilot-btn" class="btn-engage" disabled>AKTYWUJ</button>
+                <hr>
+                <h3>Kluczowe Dane</h3>
+                <p><strong>Odległość wzdłużna:</strong> <span id="dist_long_main">---</span> m</p>
+                <p><strong>Odległość poprzeczna:</strong> <span id="dist_lat_main">---</span> m</p>
+                <p><strong>Prędkość:</strong> <span id="tractor_speed_main">---</span> km/h</p>
+                <p><strong>Prędkość zadana:</strong> <span id="target_speed_main">---</span> km/h</p>
+            </div>
+        </div>
+
+        <!-- Zakładka Regulatora -->
+        <div id="TabController" class="tab-content" style="display: none;">
+            <div class="panel controller-panel">
+                <h2>Strojenie Regulatora PI</h2>
+                <div class="pid-controls">
+                    <div class="slider-group">
+                        <label for="kp-slider">Kp (Wzmocnienie): <span id="kp-value">10.0</span></label>
+                        <input type="range" id="kp-slider" min="0" max="100" value="10" step="0.5">
+                    </div>
+                    <div class="slider-group">
+                        <label for="ki-slider">Ki (Całka): <span id="ki-value">20.0</span></label>
+                        <input type="range" id="ki-slider" min="0" max="100" value="20" step="0.5">
+                    </div>
+                    <button id="apply-pid-btn">Zastosuj Parametry</button>
+                </div>
+            </div>
+            <div class="panel chart-panel">
+                <h2>Wykres Pracy Regulatora</h2>
+                <canvas id="controller-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Zakładka Szczegółów -->
+        <div id="TabDetails" class="tab-content details-tab" style="display: none;">
+            <div class="panel">
+                <h3>Status Systemu</h3>
+                <p><strong>Połączenie BT:</strong> <span id="bt_status">---</span></p>
+                <p><strong>RTK Ciągnika:</strong> <span id="tractor_rtk">---</span></p>
+                <p><strong>RTK Sieczkarni:</strong> <span id="chopper_rtk">---</span></p>
+            </div>
+            <div class="panel">
+                <h3>Ciągnik</h3>
+                <p><strong>Prędkość:</strong> <span id="tractor_speed">---</span> km/h</p>
+                <p><strong>Prędkość zadana:</strong> <span id="target_speed">---</span> km/h</p>
+                <p><strong>Półbieg:</strong> <span id="gear">---</span></p>
+                <p><strong>Sprzęgło:</strong> <span id="clutch">---</span></p>
+                <p><strong>Pozycja serwa:</strong> <span id="servo_pos">---</span> °</p>
+            </div>
+            <div class="panel">
+                <h3>Pozycja Względna</h3>
+                <p><strong>Wzdłużna:</strong> <span id="dist_long">---</span> m</p>
+                <p><strong>Poprzeczna:</strong> <span id="dist_lat">---</span> m</p>
+                <p><strong>Prosta:</strong> <span id="dist_straight">---</span> m</p>
+            </div>
+            <div class="panel">
+                <h3>Pozycja GPS</h3>
+                <p><strong>Ciągnik Lat:</strong> <span id="tractor_lat">---</span></p>
+                <p><strong>Ciągnik Lon:</strong> <span id="tractor_lon">---</span></p>
+                <p><strong>Sieczkarnia Lat:</strong> <span id="chopper_lat">---</span></p>
+                <p><strong>Sieczkarnia Lon:</strong> <span id="chopper_lon">---</span></p>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
