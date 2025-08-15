@@ -697,3 +697,467 @@ button:disabled {
     }
 }
 
+/* Style dla sekcji sterowania prędkością w zakładce Regulator */
+.speed-control-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.speed-control-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.speed-control-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.speed-input-group-large {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.speed-input-group-large label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.speed-input-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.speed-input-container input {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 1rem;
+    min-width: 120px;
+}
+
+.speed-input-container input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.unit-large {
+    color: var(--text-muted);
+    font-size: 1rem;
+    min-width: 40px;
+    font-weight: 500;
+}
+
+.btn-control-large {
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-control-large:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.current-speed-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+
+.speed-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.speed-value {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--primary-color);
+    font-family: 'Courier New', monospace;
+}
+
+/* Style dla sterowania serwem */
+.servo-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.servo-input-group input {
+    flex: 1;
+    padding: 0.5rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 1rem;
+    min-width: 80px;
+}
+
+.servo-input-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.servo-position-display {
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    font-weight: 700;
+    font-size: 1.25rem;
+    text-align: center;
+    color: var(--info-color);
+    min-height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.servo-quick-controls {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-servo-quick {
+    padding: 0.5rem 0.75rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    min-width: 100px;
+    max-width: 120px;
+}
+
+.btn-servo-quick:nth-child(1) {
+    background: var(--warning-color);
+    color: white;
+}
+
+.btn-servo-quick:nth-child(2) {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-servo-quick:nth-child(3) {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-servo-quick:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-servo-quick:active {
+    transform: translateY(0);
+}
+
+/* Style dla zakładki Control */
+.control-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+}
+
+.control-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.control-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.control-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-group label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-display {
+    padding: 0.5rem 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    font-weight: 600;
+    text-align: center;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-display.active {
+    background: var(--success-color);
+    color: white;
+}
+
+.status-display.inactive {
+    background: var(--danger-color);
+    color: white;
+}
+
+.speed-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.speed-input-group input {
+    flex: 1;
+    padding: 0.5rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.speed-input-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.unit {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    min-width: 30px;
+}
+
+.btn-control {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-control:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.toggle-group {
+    display: flex;
+    justify-content: center;
+}
+
+.btn-toggle {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.btn-toggle-on {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-toggle-off {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-toggle:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.gear-controls {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.btn-gear {
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    max-width: 150px;
+}
+
+.btn-gear-up {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-gear-down {
+    background: var(--warning-color);
+    color: white;
+}
+
+.btn-gear:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-gear:active {
+    transform: translateY(0);
+}
+
+.gear-display {
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    font-weight: 700;
+    font-size: 1.25rem;
+    text-align: center;
+    color: var(--primary-color);
+    min-height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-indicator-small {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-align: center;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-indicator-small.connected {
+    background: var(--success-color);
+    color: white;
+}
+
+.status-indicator-small.disconnected {
+    background: var(--danger-color);
+    color: white;
+}
+
+.status-indicator-small.unknown {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.last-command {
+    padding: 0.5rem 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsywność dla zakładki Control */
+@media (max-width: 768px) {
+    .control-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .control-section {
+        padding: 1rem;
+    }
+    
+    .gear-controls {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn-gear {
+        max-width: 200px;
+    }
+    
+    .speed-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 480px) {
+    .control-section {
+        padding: 0.75rem;
+    }
+    
+    .control-content {
+        gap: 0.75rem;
+    }
+    
+    .gear-controls {
+        gap: 0.25rem;
+    }
+    
+    .btn-gear {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+

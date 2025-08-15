@@ -14,12 +14,9 @@ class GearManagerNode(Node):
         super().__init__('gear_manager_node')
 
         # --- Parametry decyzyjne oparte na charakterystyce prędkości ---
-        self.declare_parameter('powershift_max_speeds', [2.9, 3.6, 4.1, 5.6], 
-                               description="Lista maksymalnych prędkości [m/s] dla półbiegów 1, 2, 3, 4.")
-        self.declare_parameter('upshift_threshold_percent', 0.95,
-                               description="Procent maksymalnej prędkości biegu, po przekroczeniu którego nastąpi zmiana w górę.")
-        self.declare_parameter('downshift_threshold_percent', 0.85,
-                               description="Procent maksymalnej prędkości NIŻSZEGO biegu, poniżej którego nastąpi redukcja.")
+        self.declare_parameter('powershift_max_speeds', [2.9, 3.6, 4.1, 5.6])
+        self.declare_parameter('upshift_threshold_percent', 0.95)
+        self.declare_parameter('downshift_threshold_percent', 0.85)
         self.declare_parameter('shift_cooldown_sec', 4.0)
         self.declare_parameter('initial_powershift', 1)
         self.declare_parameter('max_powershift', 4)

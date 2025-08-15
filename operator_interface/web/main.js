@@ -369,4 +369,357 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn(message);
         }
     }
+
+    // --- NOWA SEKCJA: Logika zakładki Control ---
+    
+    // Klienci usług dla kontroli
+    const setSpeedClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/speed_controller/set_target_speed',
+        serviceType: 'std_srvs/srv/SetFloat64'
+    });
+
+    const gearShiftUpClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/gear_shift_up',
+        serviceType: 'std_srvs/srv/SetBool'
+    });
+
+    const gearShiftDownClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/gear_shift_down',
+        serviceType: 'std_srvs/srv/SetBool'
+    });
+
+    // NOWY: Klient dla sterowania serwem
+    const setServoAngleClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/servo/set_angle',
+        serviceType: 'my_robot_interfaces/srv/SetServoAngle'
+    });
+
+    // Elementy UI zakładki Control
+    const controllerStatus = document.getElementById('controller-status');
+    const toggleSpeedControllerBtn = document.getElementById('toggle-speed-controller-btn');
+    const gearManagerStatus = document.getElementById('gear-manager-status');
+    const toggleGearManagerBtn = document.getElementById('toggle-gear-manager-btn');
+    const gearUpBtn = document.getElementById('gear-up-btn');
+    const gearDownBtn = document.getElementById('gear-down-btn');
+    const currentGearDisplay = document.getElementById('current-gear-display');
+    const rosStatusIndicator = document.getElementById('ros-status-indicator');
+    const lastCommand = document.getElementById('last-command');
+    const servoStatusIndicator = document.getElementById('servo-status-indicator');
+
+    // NOWE: Elementy UI dla sterowania serwem
+    const servoStatusDisplay = document.getElementById('servo-status-display');
+    const servoTargetInput = document.getElementById('servo-target-input');
+    const setServoBtn = document.getElementById('set-servo-btn');
+    const servoPositionDisplay = document.getElementById('servo-position-display');
+    const servoLeftBtn = document.getElementById('servo-left-btn');
+    const servoCenterBtn = document.getElementById('servo-center-btn');
+    const servoRightBtn = document.getElementById('servo-right-btn');
+    const toggleServoModeBtn = document.getElementById('toggle-servo-mode-btn');
+
+    // NOWE: Elementy UI dla sterowania prędkością w zakładce Regulator
+    const targetSpeedRegulator = document.getElementById('target-speed-regulator');
+    const setSpeedRegulatorBtn = document.getElementById('set-speed-regulator-btn');
+    const currentSpeedDisplay = document.getElementById('current-speed-display');
+
+    // NOWY: Klient dla przełączania trybu serwa
+    const setServoModeClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/servo/set_manual_mode',
+        serviceType: 'std_srvs/srv/SetBool'
+    });
+
+    // NOWA: Logika przełącznika trybu serwa
+    let isServoManualMode = false;
+    
+    toggleServoModeBtn.onclick = () => {
+        console.log('Kliknięto przełącznik trybu serwa');
+        const targetMode = !isServoManualMode;
+        console.log('Przełączam na tryb:', targetMode ? 'ręczny' : 'automatyczny');
+        
+        const request = new ROSLIB.ServiceRequest({ data: targetMode });
+        console.log('Wywołuję service /servo/set_manual_mode z request:', request);
+        
+        setServoModeClient.callService(request, (result) => {
+            console.log('Otrzymano odpowiedź service:', result);
+            if (result.success) {
+                isServoManualMode = targetMode;
+                updateServoModeUI();
+                showNotification(
+                    isServoManualMode ? 'Tryb ręczny serwa włączony' : 'Tryb automatyczny serwa włączony', 
+                    isServoManualMode ? 'success' : 'warning'
+                );
+                updateLastCommand(
+                    isServoManualMode ? 'Serwo: tryb ręczny' : 'Serwo: tryb automatyczny'
+                );
+            } else {
+                console.error('Service zwrócił błąd:', result);
+                showNotification('Błąd podczas zmiany trybu serwa!', 'error');
+            }
+        });
+    };
+
+    function updateServoModeUI() {
+        if (isServoManualMode) {
+            toggleServoModeBtn.textContent = 'RĘCZNY';
+            toggleServoModeBtn.className = 'btn-toggle btn-toggle-on';
+            
+            // Włącz kontrolki serwa
+            servoTargetInput.disabled = false;
+            setServoBtn.disabled = false;
+            servoLeftBtn.disabled = false;
+            servoCenterBtn.disabled = false;
+            servoRightBtn.disabled = false;
+        } else {
+            toggleServoModeBtn.textContent = 'AUTOMATYCZNY';
+            toggleServoModeBtn.className = 'btn-toggle btn-toggle-off';
+            
+            // Wyłącz kontrolki serwa
+            servoTargetInput.disabled = true;
+            setServoBtn.disabled = true;
+            servoLeftBtn.disabled = true;
+            servoCenterBtn.disabled = true;
+            servoRightBtn.disabled = true;
+        }
+    }
+
+    // Kontrola biegów
+    gearUpBtn.onclick = () => {
+        const request = new ROSLIB.ServiceRequest({ data: true });
+        gearShiftUpClient.callService(request, (result) => {
+            if (result.success) {
+                showNotification('Zmieniono bieg w górę', 'success');
+                updateLastCommand('Bieg w górę');
+            } else {
+                showNotification('Błąd podczas zmiany biegu!', 'error');
+            }
+        });
+    };
+
+    gearDownBtn.onclick = () => {
+        const request = new ROSLIB.ServiceRequest({ data: true });
+        gearShiftDownClient.callService(request, (result) => {
+            if (result.success) {
+                showNotification('Zmieniono bieg w dół', 'success');
+                updateLastCommand('Bieg w dół');
+            } else {
+                showNotification('Błąd podczas zmiany biegu!', 'error');
+            }
+        });
+    };
+
+    // NOWA: Sterowanie prędkością z zakładki Regulator
+    setSpeedRegulatorBtn.onclick = () => {
+        const targetSpeed = parseFloat(targetSpeedRegulator.value);
+        if (isNaN(targetSpeed) || targetSpeed < 0) {
+            showNotification('Nieprawidłowa prędkość!', 'error');
+            return;
+        }
+
+        const request = new ROSLIB.ServiceRequest({ data: targetSpeed });
+        setSpeedClient.callService(request, (result) => {
+            if (result.success) {
+                showNotification(`Prędkość zadana ustawiona na ${targetSpeed} m/s`, 'success');
+                updateLastCommand(`Ustaw prędkość: ${targetSpeed} m/s`);
+            } else {
+                showNotification('Błąd podczas ustawiania prędkości!', 'error');
+            }
+        });
+    };
+
+    // NOWA: Sterowanie serwem
+    setServoBtn.onclick = () => {
+        const targetAngle = parseInt(servoTargetInput.value);
+        if (isNaN(targetAngle) || targetAngle < 0 || targetAngle > 180) {
+            showNotification('Nieprawidłowy kąt! (0-180°)', 'error');
+            return;
+        }
+
+        // Publikuj na topik /servo/set_angle
+        const servoMsg = new ROSLIB.Message({
+            data: targetAngle
+        });
+        
+        // Używamy topiku zamiast service (zgodnie z istniejącą architekturą)
+        const servoPublisher = new ROSLIB.Topic({
+            ros: ros,
+            name: '/servo/set_angle',
+            messageType: 'my_robot_interfaces/msg/StampedInt32'
+        });
+        
+        servoPublisher.publish(servoMsg);
+        showNotification(`Serwo ustawione na ${targetAngle}°`, 'success');
+        updateLastCommand(`Serwo: ${targetAngle}°`);
+    };
+
+    // NOWA: Szybkie pozycje serwa
+    servoLeftBtn.onclick = () => {
+        const servoPublisher = new ROSLIB.Topic({
+            ros: ros,
+            name: '/servo/set_angle',
+            messageType: 'my_robot_interfaces/msg/StampedInt32'
+        });
+        
+        const servoMsg = new ROSLIB.Message({
+            data: 0
+        });
+        
+        servoPublisher.publish(servoMsg);
+        showNotification('Serwo ustawione na lewo (0°)', 'success');
+        updateLastCommand('Serwo: lewo (0°)');
+    };
+
+    servoCenterBtn.onclick = () => {
+        const servoPublisher = new ROSLIB.Topic({
+            ros: ros,
+            name: '/servo/set_angle',
+            messageType: 'my_robot_interfaces/msg/StampedInt32'
+        });
+        
+        const servoMsg = new ROSLIB.Message({
+            data: 90
+        });
+        
+        servoPublisher.publish(servoMsg);
+        showNotification('Serwo ustawione na środek (90°)', 'success');
+        updateLastCommand('Serwo: środek (90°)');
+    };
+
+    servoRightBtn.onclick = () => {
+        const servoPublisher = new ROSLIB.Topic({
+            ros: ros,
+            name: '/servo/set_angle',
+            messageType: 'my_robot_interfaces/msg/StampedInt32'
+        });
+        
+        const servoMsg = new ROSLIB.Message({
+            data: 180
+        });
+        
+        servoPublisher.publish(servoMsg);
+        showNotification('Serwo ustawione na prawo (180°)', 'success');
+        updateLastCommand('Serwo: prawo (180°)');
+    };
+
+    // Aktualizacja statusu połączenia ROS
+    ros.on('connection', () => {
+        rosStatusIndicator.textContent = 'POŁĄCZONO';
+        rosStatusIndicator.className = 'status-indicator-small connected';
+    });
+    
+    ros.on('error', () => {
+        rosStatusIndicator.textContent = 'BŁĄD';
+        rosStatusIndicator.className = 'status-indicator-small disconnected';
+    });
+    
+    ros.on('close', () => {
+        rosStatusIndicator.textContent = 'ROZŁĄCZONO';
+        rosStatusIndicator.className = 'status-indicator-small disconnected';
+    });
+
+    // Aktualizacja statusu regulatora na podstawie danych diagnostycznych
+    diagnosticsListener.subscribe((message) => {
+        // Aktualizacja statusu regulatora
+        if (message.target_speed.data !== PLACEHOLDER_FLOAT) {
+            controllerStatus.textContent = 'AKTYWNY';
+            controllerStatus.className = 'status-display active';
+            
+            // NOWE: Aktualizacja wyświetlacza prędkości w zakładce Regulator
+            const speedKmh = (message.target_speed.data * 3.6).toFixed(1);
+            currentSpeedDisplay.textContent = `${speedKmh} km/h`;
+        } else {
+            controllerStatus.textContent = 'NIEAKTYWNY';
+            controllerStatus.className = 'status-display inactive';
+            currentSpeedDisplay.textContent = '--- km/h';
+        }
+
+        // Aktualizacja statusu gear manager (symulacja - w rzeczywistości potrzebujesz osobnego topiku)
+        if (message.tractor_gear.gear !== 255) {
+            gearManagerStatus.textContent = 'AKTYWNY';
+            gearManagerStatus.className = 'status-display active';
+        } else {
+            gearManagerStatus.textContent = 'NIEAKTYWNY';
+            gearManagerStatus.className = 'status-display inactive';
+        }
+
+        // Aktualizacja wyświetlacza biegu
+        if (message.tractor_gear.gear !== 255) {
+            currentGearDisplay.textContent = message.tractor_gear.gear;
+        } else {
+            currentGearDisplay.textContent = '---';
+        }
+
+        // Aktualizacja statusu serwa
+        if (message.servo_position.data !== PLACEHOLDER_INT) {
+            servoStatusIndicator.textContent = 'OK';
+            servoStatusIndicator.className = 'status-indicator-small connected';
+            
+            // NOWE: Aktualizacja wyświetlacza pozycji serwa w zakładce Control
+            servoPositionDisplay.textContent = `${message.servo_position.data}°`;
+            servoStatusDisplay.textContent = 'OK';
+            servoStatusDisplay.className = 'status-display active';
+        } else {
+            servoStatusIndicator.textContent = 'BŁĄD';
+            servoStatusIndicator.className = 'status-indicator-small disconnected';
+            
+            // NOWE: Aktualizacja wyświetlacza pozycji serwa w zakładce Control
+            servoPositionDisplay.textContent = '---°';
+            servoStatusDisplay.textContent = 'BŁĄD';
+            servoStatusDisplay.className = 'status-display inactive';
+        }
+    });
+
+    // Funkcja aktualizacji ostatniej komendy
+    function updateLastCommand(command) {
+        const timestamp = new Date().toLocaleTimeString('pl-PL');
+        lastCommand.textContent = `${timestamp}: ${command}`;
+    }
+
+    // Inicjalizacja statusów
+    updateLastCommand('System gotowy');
+
+    // NOWA: Inicjalizacja UI serwa
+    updateServoModeUI();
+
+    // --- Logika przełącznika regulatora prędkości ---
+    let isSpeedControllerEnabled = false;
+    
+    toggleSpeedControllerBtn.onclick = () => {
+        isSpeedControllerEnabled = !isSpeedControllerEnabled;
+        
+        if (isSpeedControllerEnabled) {
+            toggleSpeedControllerBtn.textContent = 'WŁĄCZONA';
+            toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-on';
+            showNotification('Regulacja prędkości włączona', 'success');
+            updateLastCommand('Włączono regulację prędkości');
+        } else {
+            toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
+            toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
+            showNotification('Regulacja prędkości wyłączona', 'warning');
+            updateLastCommand('Wyłączono regulację prędkości');
+        }
+    };
+
+    // --- Logika przełącznika gear manager ---
+    let isGearManagerEnabled = false;
+    
+    toggleGearManagerBtn.onclick = () => {
+        isGearManagerEnabled = !isGearManagerEnabled;
+        
+        if (isGearManagerEnabled) {
+            toggleGearManagerBtn.textContent = 'WŁĄCZONE';
+            toggleGearManagerBtn.className = 'btn-toggle btn-toggle-on';
+            showNotification('Automatyczne zarządzanie biegami włączone', 'success');
+            updateLastCommand('Włączono gear manager');
+        } else {
+            toggleGearManagerBtn.textContent = 'WYŁĄCZONE';
+            toggleGearManagerBtn.className = 'btn-toggle btn-toggle-off';
+            showNotification('Automatyczne zarządzanie biegami wyłączone', 'warning');
+            updateLastCommand('Wyłączono gear manager');
+        }
+    };
+    // ====================================================
 });

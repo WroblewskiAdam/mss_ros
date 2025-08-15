@@ -47,8 +47,17 @@ Otwórz przeglądarkę i przejdź do:
 
 ### 📊 Regulator
 - **Wykres pracy** - prędkość zadana, aktualna i sterowanie
+- **🎯 Ustawianie prędkości zadanej** - pole input + przycisk ustawienia
+- **Wyświetlacz aktualnej prędkości** - monitoring w czasie rzeczywistym
 - **Nastawy** - przycisk otwierający modal z parametrami Kp/Ki
 - **Pełnoekranowy wykres** - optymalny do analizy
+
+### 🎮 Control
+- **🚜 Kontrola Regulatora Prędkości** - status, włączanie/wyłączanie regulacji
+- **⚙️ Kontrola Biegów** - status gear manager, automatyczne/rzęczne zarządzanie, zmiana biegów
+- **🎮 Ręczne Sterowanie Serwem** - ustawianie pozycji, szybkie pozycje (lewo/środek/prawo)
+- **📊 Status Systemu** - połączenie ROS, ostatnie komendy, status serwa
+- **Ręczne sterowanie** - bezpośrednie zarządzanie systemem
 
 ### 🔍 Szczegóły
 - **🔧 Status Systemu** - połączenie BT, status RTK

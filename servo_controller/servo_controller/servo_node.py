@@ -2,10 +2,11 @@
 
 import rclpy
 from rclpy.node import Node
-from my_robot_interfaces.msg import StampedInt32
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
-from adafruit_servokit import ServoKit
+from my_robot_interfaces.msg import StampedInt32
+from std_srvs.srv import SetBool
 import time
+from adafruit_servokit import ServoKit
 
 class ServoController(Node):
     def __init__(self):
@@ -54,10 +55,32 @@ class ServoController(Node):
         # Zmienne stanu serwa
         self.current_simulated_angle = 0.0
         self.target_angle = 0.0
+        self.manual_mode = False  # NOWA ZMIENNA: tryb ręczny
+
+        # NOWY SERVICE: przełączanie trybu serwa
+        self.set_mode_service = self.create_service(SetBool, '/servo/set_manual_mode', self.set_manual_mode_callback)
 
         self.get_logger().info('Servo controller node started.')
         self.get_logger().info(f"Watchdog aktywny. Timeout: {self.watchdog_timeout}s.")
+        self.get_logger().info("Tryb automatyczny (watchdog aktywny). Użyj service '/servo/set_manual_mode' aby przełączyć.")
         self.set_initial_angle(0)
+
+    def set_manual_mode_callback(self, request, response):
+        """Service callback do przełączania trybu serwa."""
+        self.get_logger().info(f"Otrzymano żądanie zmiany trybu serwa: {request.data}")
+        
+        self.manual_mode = request.data
+        
+        if self.manual_mode:
+            self.get_logger().info("PRZEŁĄCZONO NA TRYB RĘCZNY - watchdog wyłączony!")
+            response.message = "Tryb ręczny włączony - watchdog wyłączony"
+        else:
+            self.get_logger().info("PRZEŁĄCZONO NA TRYB AUTOMATYCZNY - watchdog włączony!")
+            response.message = "Tryb automatyczny włączony - watchdog włączony"
+        
+        response.success = True
+        self.get_logger().info(f"Service zwraca: success={response.success}, message={response.message}")
+        return response
 
     def set_target_angle_callback(self, msg):
         # Resetujemy czas watchdoga przy każdej nowej komendzie
@@ -71,6 +94,10 @@ class ServoController(Node):
 
     def watchdog_callback(self):
         """Sprawdza, czy nie upłynął czas od ostatniej wiadomości."""
+        # NOWOŚĆ: Watchdog nie działa w trybie ręcznym
+        if self.manual_mode:
+            return
+            
         current_time = self.get_clock().now().nanoseconds / 1e9
         time_since_last_msg = current_time - self.last_msg_time
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MSS Operator Interface</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
@@ -21,6 +21,7 @@
         <div class="tabs">
             <button class="tab-button active" onclick="openTab(event, 'TabMain')">Główny</button>
             <button class="tab-button" onclick="openTab(event, 'TabController')">Regulator</button>
+            <button class="tab-button" onclick="openTab(event, 'TabControl')">Control</button>
             <button class="tab-button" onclick="openTab(event, 'TabDetails')">Szczegóły</button>
         </div>
 
@@ -76,8 +77,134 @@
                     <h2>Wykres Pracy Regulatora</h2>
                     <button id="settings-btn" class="btn-settings">⚙️ Nastawy</button>
                 </div>
+                
+                <!-- NOWA SEKCJA: Ustawianie prędkości zadanej -->
+                <div class="speed-control-section">
+                    <h3>🎯 Ustawianie Prędkości Zadanej</h3>
+                    <div class="speed-control-content">
+                        <div class="speed-input-group-large">
+                            <label for="target-speed-regulator">Prędkość zadana:</label>
+                            <div class="speed-input-container">
+                                <input type="number" id="target-speed-regulator" min="0" max="20" step="0.1" value="5.0">
+                                <span class="unit-large">m/s</span>
+                                <button id="set-speed-regulator-btn" class="btn-control-large">Ustaw Prędkość</button>
+                            </div>
+                        </div>
+                        <div class="current-speed-display">
+                            <span class="speed-label">Aktualna prędkość:</span>
+                            <span class="speed-value" id="current-speed-display">--- m/s</span>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="chart-container">
                     <canvas id="controller-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zakładka Control -->
+        <div id="TabControl" class="tab-content">
+            <div class="control-grid">
+                <!-- Kontrola Regulatora Prędkości -->
+                <div class="control-section">
+                    <h3>🚜 Kontrola Regulatora Prędkości</h3>
+                    <div class="control-content">
+                        <div class="control-group">
+                            <label>Status Regulatora:</label>
+                            <div class="status-display" id="controller-status">Nieaktywny</div>
+                        </div>
+                        <div class="control-group">
+                            <label>Regulacja Prędkości:</label>
+                            <div class="toggle-group">
+                                <button id="toggle-speed-controller-btn" class="btn-toggle btn-toggle-off">WYŁĄCZONA</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kontrola Biegów -->
+                <div class="control-section">
+                    <h3>⚙️ Kontrola Biegów</h3>
+                    <div class="control-content">
+                        <div class="control-group">
+                            <label>Status Gear Manager:</label>
+                            <div class="status-display" id="gear-manager-status">Nieaktywny</div>
+                        </div>
+                        <div class="control-group">
+                            <label>Automatyczne Zarządzanie:</label>
+                            <div class="toggle-group">
+                                <button id="toggle-gear-manager-btn" class="btn-toggle btn-toggle-off">WYŁĄCZONE</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label>Ręczna Zmiana Biegów:</label>
+                            <div class="gear-controls">
+                                <button id="gear-up-btn" class="btn-gear btn-gear-up">⬆️ Bieg W GÓRĘ</button>
+                                <button id="gear-down-btn" class="btn-gear btn-gear-down">⬇️ Bieg W DÓŁ</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label>Aktualny Półbieg:</label>
+                            <div class="gear-display" id="current-gear-display">---</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NOWA SEKCJA: Ręczne Sterowanie Serwem -->
+                <div class="control-section">
+                    <h3>🎮 Ręczne Sterowanie Serwem</h3>
+                    <div class="control-content">
+                        <div class="control-group">
+                            <label>Status Serwa:</label>
+                            <div class="status-display" id="servo-status-display">Nieznany</div>
+                        </div>
+                        <div class="control-group">
+                            <label>Tryb Sterowania Serwa:</label>
+                            <div class="toggle-group">
+                                <button id="toggle-servo-mode-btn" class="btn-toggle btn-toggle-off">AUTOMATYCZNY</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label>Pozycja Docelowa:</label>
+                            <div class="servo-input-group">
+                                <input type="number" id="servo-target-input" min="0" max="180" step="1" value="90" disabled>
+                                <span class="unit">°</span>
+                                <button id="set-servo-btn" class="btn-control" disabled>Ustaw Pozycję</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label>Aktualna Pozycja:</label>
+                            <div class="servo-position-display" id="servo-position-display">---°</div>
+                        </div>
+                        <div class="control-group">
+                            <label>Szybkie Pozycje:</label>
+                            <div class="servo-quick-controls">
+                                <button id="servo-left-btn" class="btn-servo-quick" disabled>⬅️ Lewo (0°)</button>
+                                <button id="servo-center-btn" class="btn-servo-quick" disabled>⬆️ Środek (90°)</button>
+                                <button id="servo-right-btn" class="btn-servo-quick" disabled>➡️ Prawo (180°)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Systemu -->
+                <div class="control-section">
+                    <h3>📊 Status Systemu</h3>
+                    <div class="control-content">
+                        <div class="control-group">
+                            <label>Połączenie ROS:</label>
+                            <div class="status-indicator-small" id="ros-status-indicator">Rozłączono</div>
+                        </div>
+                        <div class="control-group">
+                            <label>Ostatnia Komenda:</label>
+                            <div class="last-command" id="last-command">Brak</div>
+                        </div>
+                        <div class="control-group">
+                            <label>Status Serwa:</label>
+                            <div class="status-indicator-small" id="servo-status-indicator">Nieznany</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
