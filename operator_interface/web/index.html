@@ -5,12 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MSS Operator Interface</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Biblioteka do wykresów -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
     <div class="main-container">
+        <!-- Górny pasek statusu -->
+        <div class="status-bar-container">
+            <div id="connection-status" class="status-indicator status-off">ROZŁĄCZONO</div>
+            <div id="autopilot-status" class="status-indicator status-off">AUTOPILOT WYŁĄCZONY</div>
+            <button id="toggle-autopilot-btn" class="btn-engage" disabled>AKTYWUJ</button>
+        </div>
+
+        <!-- Zakładki -->
         <div class="tabs">
             <button class="tab-button active" onclick="openTab(event, 'TabMain')">Główny</button>
             <button class="tab-button" onclick="openTab(event, 'TabController')">Regulator</button>
@@ -18,77 +25,213 @@
         </div>
 
         <!-- Zakładka Główna -->
-        <div id="TabMain" class="tab-content" style="display: flex;">
-            <div id="main-view" class="panel">
+        <div id="TabMain" class="tab-content active">
+            <div class="main-panel">
                 <h2>Wizualizacja Względna</h2>
                 <div id="viz-container">
-                    <div id="chopper" title="Sieczkarnia"></div>
-                    <div id="tractor" title="Ciągnik"></div>
+                    <!-- Sieczkarnia -->
+                    <div id="chopper" class="vehicle-symbol" title="Sieczkarnia">
+                        <div class="vehicle-icon chopper-simple"></div>
+                        <div class="speed-label" id="chopper-speed">0.0 km/h</div>
+                    </div>
+                    
+                    <!-- Ciągnik z przyczepą -->
+                    <div id="tractor" class="vehicle-symbol" title="Ciągnik">
+                        <div class="vehicle-icon tractor-simple"></div>
+                        <div class="speed-label" id="tractor-speed">0.0 km/h</div>
+                    </div>
                 </div>
             </div>
-            <div id="sidebar" class="panel">
-                <div id="connection-status" class="status-bar status-off">ROZŁĄCZONO</div>
-                <div id="autopilot-status" class="status-bar status-off">AUTOPILOT WYŁĄCZONY</div>
-                <button id="toggle-autopilot-btn" class="btn-engage" disabled>AKTYWUJ</button>
-                <hr>
+            <div class="data-panel">
                 <h3>Kluczowe Dane</h3>
-                <p><strong>Odległość wzdłużna:</strong> <span id="dist_long_main">---</span> m</p>
-                <p><strong>Odległość poprzeczna:</strong> <span id="dist_lat_main">---</span> m</p>
-                <p><strong>Prędkość:</strong> <span id="tractor_speed_main">---</span> km/h</p>
-                <p><strong>Prędkość zadana:</strong> <span id="target_speed_main">---</span> km/h</p>
+                <div class="data-grid">
+                    <div class="data-item">
+                        <span class="data-label">Odległość wzdłużna:</span>
+                        <span class="data-value" id="dist_long_main">---</span>
+                        <span class="data-unit">m</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Odległość poprzeczna:</span>
+                        <span class="data-value" id="dist_lat_main">---</span>
+                        <span class="data-unit">m</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Prędkość:</span>
+                        <span class="data-value" id="tractor_speed_main">---</span>
+                        <span class="data-unit">km/h</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Prędkość zadana:</span>
+                        <span class="data-value" id="target_speed_main">---</span>
+                        <span class="data-unit">km/h</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Zakładka Regulatora -->
-        <div id="TabController" class="tab-content" style="display: none;">
-            <div class="panel controller-panel">
-                <h2>Strojenie Regulatora PI</h2>
-                <div class="pid-controls">
-                    <div class="slider-group">
-                        <label for="kp-slider">Kp (Wzmocnienie): <span id="kp-value">10.0</span></label>
-                        <input type="range" id="kp-slider" min="0" max="100" value="10" step="0.5">
-                    </div>
-                    <div class="slider-group">
-                        <label for="ki-slider">Ki (Całka): <span id="ki-value">20.0</span></label>
-                        <input type="range" id="ki-slider" min="0" max="100" value="20" step="0.5">
-                    </div>
-                    <button id="apply-pid-btn">Zastosuj Parametry</button>
+        <div id="TabController" class="tab-content">
+            <div class="controller-panel">
+                <div class="chart-header">
+                    <h2>Wykres Pracy Regulatora</h2>
+                    <button id="settings-btn" class="btn-settings">⚙️ Nastawy</button>
                 </div>
-            </div>
-            <div class="panel chart-panel">
-                <h2>Wykres Pracy Regulatora</h2>
-                <canvas id="controller-chart"></canvas>
+                <div class="chart-container">
+                    <canvas id="controller-chart"></canvas>
+                </div>
             </div>
         </div>
 
         <!-- Zakładka Szczegółów -->
-        <div id="TabDetails" class="tab-content details-tab" style="display: none;">
-            <div class="panel">
-                <h3>Status Systemu</h3>
-                <p><strong>Połączenie BT:</strong> <span id="bt_status">---</span></p>
-                <p><strong>RTK Ciągnika:</strong> <span id="tractor_rtk">---</span></p>
-                <p><strong>RTK Sieczkarni:</strong> <span id="chopper_rtk">---</span></p>
+        <div id="TabDetails" class="tab-content">
+            <div class="details-grid">
+                <!-- Status Systemu -->
+                <div class="detail-section">
+                    <h3>🔧 Status Systemu</h3>
+                    <div class="detail-content">
+                        <div class="detail-item">
+                            <span class="detail-label">Połączenie BT:</span>
+                            <span class="detail-value" id="bt_status">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">RTK Ciągnika:</span>
+                            <span class="detail-value" id="tractor_rtk">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">RTK Sieczkarni:</span>
+                            <span class="detail-value" id="chopper_rtk">---</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ciągnik -->
+                <div class="detail-section">
+                    <h3>🚜 Ciągnik</h3>
+                    <div class="detail-content">
+                        <div class="detail-item">
+                            <span class="detail-label">Prędkość:</span>
+                            <span class="detail-value" id="tractor_speed">---</span>
+                            <span class="detail-unit">km/h</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Prędkość zadana:</span>
+                            <span class="detail-value" id="target_speed">---</span>
+                            <span class="detail-unit">km/h</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Półbieg:</span>
+                            <span class="detail-value" id="gear">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Sprzęgło:</span>
+                            <span class="detail-value" id="clutch">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Pozycja serwa:</span>
+                            <span class="detail-value" id="servo_pos">---</span>
+                            <span class="detail-unit">°</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Szerokość geograficzna:</span>
+                            <span class="detail-value" id="tractor_lat">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Długość geograficzna:</span>
+                            <span class="detail-value" id="tractor_lon">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Wysokość:</span>
+                            <span class="detail-value" id="tractor_alt">---</span>
+                            <span class="detail-unit">m</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Kurs:</span>
+                            <span class="detail-value" id="tractor_heading">---</span>
+                            <span class="detail-unit">°</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Czas GPS:</span>
+                            <span class="detail-value" id="tractor_gps_time">---</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sieczkarnia -->
+                <div class="detail-section">
+                    <h3>🌾 Sieczkarnia</h3>
+                    <div class="detail-content">
+                        <div class="detail-item">
+                            <span class="detail-label">Prędkość:</span>
+                            <span class="detail-value" id="chopper_speed">---</span>
+                            <span class="detail-unit">km/h</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Szerokość geograficzna:</span>
+                            <span class="detail-value" id="chopper_lat">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Długość geograficzna:</span>
+                            <span class="detail-value" id="chopper_lon">---</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Wysokość:</span>
+                            <span class="detail-value" id="chopper_alt">---</span>
+                            <span class="detail-unit">m</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Kurs:</span>
+                            <span class="detail-value" id="chopper_heading">---</span>
+                            <span class="detail-unit">°</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Czas GPS:</span>
+                            <span class="detail-value" id="chopper_gps_time">---</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pozycja Względna -->
+                <div class="detail-section">
+                    <h3>📍 Pozycja Względna</h3>
+                    <div class="detail-content">
+                        <div class="detail-item">
+                            <span class="detail-label">Wzdłużna:</span>
+                            <span class="detail-value" id="dist_long">---</span>
+                            <span class="detail-unit">m</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Poprzeczna:</span>
+                            <span class="detail-value" id="dist_lat">---</span>
+                            <span class="detail-unit">m</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Prosta:</span>
+                            <span class="detail-value" id="dist_straight">---</span>
+                            <span class="detail-unit">m</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="panel">
-                <h3>Ciągnik</h3>
-                <p><strong>Prędkość:</strong> <span id="tractor_speed">---</span> km/h</p>
-                <p><strong>Prędkość zadana:</strong> <span id="target_speed">---</span> km/h</p>
-                <p><strong>Półbieg:</strong> <span id="gear">---</span></p>
-                <p><strong>Sprzęgło:</strong> <span id="clutch">---</span></p>
-                <p><strong>Pozycja serwa:</strong> <span id="servo_pos">---</span> °</p>
+        </div>
+    </div>
+
+    <!-- Modal z nastawami -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Nastawy Regulatora PI</h3>
+                <span class="close">&times;</span>
             </div>
-            <div class="panel">
-                <h3>Pozycja Względna</h3>
-                <p><strong>Wzdłużna:</strong> <span id="dist_long">---</span> m</p>
-                <p><strong>Poprzeczna:</strong> <span id="dist_lat">---</span> m</p>
-                <p><strong>Prosta:</strong> <span id="dist_straight">---</span> m</p>
-            </div>
-            <div class="panel">
-                <h3>Pozycja GPS</h3>
-                <p><strong>Ciągnik Lat:</strong> <span id="tractor_lat">---</span></p>
-                <p><strong>Ciągnik Lon:</strong> <span id="tractor_lon">---</span></p>
-                <p><strong>Sieczkarnia Lat:</strong> <span id="chopper_lat">---</span></p>
-                <p><strong>Sieczkarnia Lon:</strong> <span id="chopper_lon">---</span></p>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <label for="kp-slider">Kp (Wzmocnienie): <span id="kp-value">10.0</span></label>
+                    <input type="range" id="kp-slider" min="0" max="100" value="10" step="0.5">
+                </div>
+                <div class="settings-group">
+                    <label for="ki-slider">Ki (Całka): <span id="ki-value">20.0</span></label>
+                    <input type="range" id="ki-slider" min="0" max="100" value="20" step="0.5">
+                </div>
+                <button id="apply-pid-btn" class="btn-apply">Zastosuj Parametry</button>
             </div>
         </div>
     </div>
