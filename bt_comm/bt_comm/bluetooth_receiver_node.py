@@ -3,17 +3,19 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from my_robot_interfaces.msg import GpsRtk
+from std_msgs.msg import String
 import socket
 import json
 import threading
 import time
 from datetime import datetime, timezone
+import psutil
 
 class BluetoothReceiverNode(Node):
     def __init__(self):
         super().__init__('bluetooth_receiver_node')
         
-        self.declare_parameter('bt_port', 1)
+        self.declare_parameter('bt_port', 2)  # Zmiana z portu 1 na 2
         self.declare_parameter('publish_topic', '/gps_rtk_data/chopper')
 
         self.port = self.get_parameter('bt_port').get_parameter_value().integer_value
@@ -26,10 +28,54 @@ class BluetoothReceiverNode(Node):
         )
         self.publisher_ = self.create_publisher(GpsRtk, self.publish_topic, qos_profile)
 
+        # === NOWY PUBLISHER: Health reporting ===
+        self.health_pub = self.create_publisher(String, '/mss/node_health/bt_receiver_node', qos_profile)
+        # === NOWY TIMER: Health reporting co 5 sekund ===
+        self.health_timer = self.create_timer(5.0, self.publish_health)
+
         self.stop_event = threading.Event()
         self.server_thread = threading.Thread(target=self.server_loop, daemon=True)
         self.server_thread.start()
         self.get_logger().info("Wątek serwera Bluetooth uruchomiony.")
+
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            # Sprawdź status wątku serwera
+            server_thread_status = "OK" if self.server_thread.is_alive() else "ERROR"
+            
+            # Sprawdź status połączenia Bluetooth
+            bt_status = "OK" if not self.stop_event.is_set() else "STOPPING"
+            
+            # Zbierz dane o błędach i ostrzeżeniach
+            errors = []
+            warnings = []
+            
+            if server_thread_status == "ERROR":
+                errors.append("Wątek serwera nieaktywny")
+            if bt_status == "STOPPING":
+                warnings.append("Węzeł w trakcie zatrzymywania")
+            
+            # Przygotuj dane health
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': time.time(),
+                'server_thread_status': server_thread_status,
+                'bt_status': bt_status,
+                'port': self.port,
+                'errors': errors,
+                'warnings': warnings,
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            
+            # Opublikuj health status
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
     def _convert_gps_utc_to_ros_time(self, utc_time_str: str):
         if not utc_time_str or '.' not in utc_time_str:

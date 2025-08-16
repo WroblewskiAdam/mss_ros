@@ -45,11 +45,12 @@ else
 fi
 
 echo ""
-echo "Uruchamianie systemu MSS..."
+            echo "Uruchamianie systemu MSS..."
 
-# Uruchomienie systemu
-cd /home/pi/mss_ros/src
-source /opt/ros/humble/setup.bash
-ros2 launch mss_bringup all_nodes.launch.py
+            # Uruchomienie systemu MSS z health monitor
+            cd /home/pi/mss_ros/src
+            source /opt/ros/humble/setup.bash
+            echo "Uruchamiam system MSS z health monitor..."
+            ros2 launch mss_bringup all_nodes.launch.py
 
 echo "System MSS zakończył działanie."

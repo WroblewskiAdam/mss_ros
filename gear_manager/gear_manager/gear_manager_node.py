@@ -2,7 +2,10 @@ import rclpy
 from rclpy.node import Node
 from std_srvs.srv import SetBool
 from my_robot_interfaces.msg import Gear, StampedInt32
-from std_msgs.msg import Float64 # <-- NOWY IMPORT
+from std_msgs.msg import Float64, String # <-- NOWY IMPORT
+import json
+import psutil
+import time
 
 class GearManagerNode(Node):
     """
@@ -49,6 +52,11 @@ class GearManagerNode(Node):
 
         # --- Główna pętla decyzyjna ---
         self.decision_timer = self.create_timer(0.5, self.decision_loop) # 2 Hz
+
+        # === NOWY PUBLISHER: Health reporting ===
+        self.health_pub = self.create_publisher(String, '/mss/node_health/gear_manager_node', 10)
+        # === NOWY TIMER: Health reporting co 5 sekund ===
+        self.health_timer = self.create_timer(5.0, self.publish_health)
 
         self.get_logger().info("Menedżer półbiegów uruchomiony (logika oparta na profilu prędkości).")
         self.get_logger().info(f"Maksymalne prędkości półbiegów: {self.powershift_max_speeds}")
@@ -118,6 +126,52 @@ class GearManagerNode(Node):
                 if await self.call_shift_service(self.shift_down_client, "DÓŁ"):
                     self.current_powershift -= 1
                 return
+
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            # Sprawdź status klientów usług
+            shift_up_status = "OK" if self.shift_up_client.service_is_ready() else "ERROR"
+            shift_down_status = "OK" if self.shift_down_client.service_is_ready() else "ERROR"
+            
+            # Sprawdź status timerów
+            timer_status = "OK" if hasattr(self, 'decision_timer') else "ERROR"
+            
+            # Zbierz dane o błędach i ostrzeżeniach
+            errors = []
+            warnings = []
+            
+            if shift_up_status == "ERROR":
+                errors.append("Serwis shift_up niedostępny")
+            if shift_down_status == "ERROR":
+                errors.append("Serwis shift_down niedostępny")
+            if timer_status == "ERROR":
+                errors.append("Timer decyzyjny nieaktywny")
+            
+            # Przygotuj dane health
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': time.time(),
+                'shift_up_status': shift_up_status,
+                'shift_down_status': shift_down_status,
+                'timer_status': timer_status,
+                'current_powershift': self.current_powershift,
+                'current_mechanical_gear': self.current_mechanical_gear,
+                'clutch_pressed': self.clutch_pressed,
+                'target_speed': self.target_speed,
+                'errors': errors,
+                'warnings': warnings,
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            
+            # Opublikuj health status
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
 def main(args=None):
     rclpy.init(args=args)

@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timezone
 
 from my_robot_interfaces.msg import GpsRtk
+from std_msgs.msg import String
 
 class GpsRtkNode(Node):
     def __init__(self):
@@ -43,6 +44,11 @@ class GpsRtkNode(Node):
             depth=1
         )
         self.publisher_ = self.create_publisher(GpsRtk, 'gps_rtk_data', qos_profile)
+
+        # === NOWY PUBLISHER: Health reporting ===
+        self.health_pub = self.create_publisher(String, '/mss/node_health/gps_rtk_node', qos_profile)
+        # === NOWY TIMER: Health reporting co 5 sekund ===
+        self.health_timer = self.create_timer(5.0, self.publish_health)
 
         # Zaktualizowana struktura do przechowywania danych
         self.latest_gps_data = {
@@ -78,6 +84,64 @@ class GpsRtkNode(Node):
         self.get_logger().info(f"GPS RTK Node uruchomiony. Publikowanie na '/gps_rtk_data' z częstotliwością {self.publish_frequency} Hz.")
         self.get_logger().info("Node oczekuje teraz na wiadomości GNGGA oraz AGRIC.")
 
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            import json
+            import psutil
+            
+            # Sprawdź status portu szeregowego
+            serial_status = "OK" if (self.rtk_serial and self.rtk_serial.is_open) else "ERROR"
+            
+            # Sprawdź status połączenia NTRIP
+            ntrip_status = "OK" if self.ntrip_socket else "ERROR"
+            
+            # Sprawdź status wątków
+            threads_status = "OK"
+            if hasattr(self, 'thread_rtk_reader') and hasattr(self, 'thread_ntrip_reader'):
+                if not self.thread_rtk_reader.is_alive() or not self.thread_ntrip_reader.is_alive():
+                    threads_status = "ERROR"
+            
+            # Zbierz dane o błędach i ostrzeżeniach
+            errors = []
+            warnings = []
+            
+            if serial_status == "ERROR":
+                errors.append("Port szeregowy nieaktywny")
+            if ntrip_status == "ERROR":
+                warnings.append("Brak połączenia NTRIP")
+            if threads_status == "ERROR":
+                errors.append("Wątki nieaktywne")
+            
+            # Sprawdź świeżość danych GPS
+            current_time = self.get_clock().now().nanoseconds / 1e9
+            if hasattr(self, 'latest_gps_data') and 'timestamp_gngga' in self.latest_gps_data:
+                time_since_gngga = current_time - self.latest_gps_data['timestamp_gngga']
+                if time_since_gngga > 10.0:  # Więcej niż 10 sekund
+                    warnings.append(f"Dane GPS nieaktualne ({time_since_gngga:.1f}s)")
+            
+            # Przygotuj dane health
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': current_time,
+                'serial_status': serial_status,
+                'ntrip_status': ntrip_status,
+                'threads_status': threads_status,
+                'gps_data_age': time_since_gngga if 'time_since_gngga' in locals() else 0.0,
+                'errors': errors,
+                'warnings': warnings,
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            
+            # Opublikuj health status
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
+
     def _rtk_reader_thread_func(self):
         """
         Główny wątek odczytujący dane z portu szeregowego.
@@ -100,6 +164,10 @@ class GpsRtkNode(Node):
 
                     with self.data_lock:
                         if decoded_line.startswith("$GNGGA"):
+                            # Sprawdź czy linia nie jest uszkodzona
+                            if decoded_line.count(',') < 9 or '$' in decoded_line[1:]:
+                                self.get_logger().warn(f"Pominięto uszkodzoną linię GNGGA: {decoded_line}")
+                                continue
                             parts = decoded_line.split(',')
                             if len(parts) > 9:
                                 try:

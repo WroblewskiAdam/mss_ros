@@ -3,7 +3,10 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
 # Importuj wszystkie potrzebne wiadomości
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, String
+import json
+import psutil
+import time
 from my_robot_interfaces.msg import GpsRtk, Gear, DistanceMetrics, StampedInt32, DiagnosticData
 
 # Wartości zastępcze
@@ -46,6 +49,12 @@ class DiagnosticsNode(Node):
 
         # --- Główna pętla (Timer) ---
         self.timer = self.create_timer(1.0 / publish_frequency, self.main_loop_callback)
+        
+        # === NOWY PUBLISHER: Health reporting ===
+        self.health_pub = self.create_publisher(String, '/mss/node_health/diagnostics_node', 10)
+        # === NOWY TIMER: Health reporting co 5 sekund ===
+        self.health_timer = self.create_timer(5.0, self.publish_health)
+        
         self.get_logger().info(f'Węzeł diagnostyczny uruchomiony. Publikuje z f={publish_frequency} Hz.')
 
     # --- Definicje callbacków ---
@@ -115,6 +124,55 @@ class DiagnosticsNode(Node):
             diag_msg.relative_position.distance_lateral = PLACEHOLDER_FLOAT
 
         self.diag_publisher.publish(diag_msg)
+
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            # Sprawdź status timerów
+            timer_status = "OK" if hasattr(self, 'timer') else "ERROR"
+            
+            # Sprawdź status publisherów
+            publisher_status = "OK" if hasattr(self, 'diag_publisher') else "ERROR"
+            
+            # Sprawdź status subskrypcji
+            subscription_status = "OK"
+            # Sprawdź czy istnieją subskrypcje (diagnostics_node ma wiele subskrypcji)
+            if not hasattr(self, 'tractor_gps_callback') or not hasattr(self, 'chopper_gps_callback'):
+                subscription_status = "ERROR"
+            
+            # Zbierz dane o błędach i ostrzeżeniach
+            errors = []
+            warnings = []
+            
+            if timer_status == "ERROR":
+                errors.append("Timer nieaktywny")
+            if publisher_status == "ERROR":
+                errors.append("Publisher nieaktywny")
+            if subscription_status == "ERROR":
+                errors.append("Subskrypcje nieaktywne")
+            
+            # Przygotuj dane health
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': time.time(),
+                'timer_status': timer_status,
+                'publisher_status': publisher_status,
+                'subscription_status': subscription_status,
+                'publish_frequency_hz': self.get_parameter('publish_frequency_hz').get_parameter_value().double_value,
+                'data_timeout_sec': self.data_timeout,
+                'errors': errors,
+                'warnings': warnings,
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            
+            # Opublikuj health status
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
 def main(args=None):
     rclpy.init(args=args)

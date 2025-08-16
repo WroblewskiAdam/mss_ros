@@ -6,6 +6,9 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from my_robot_interfaces.msg import StampedInt32
 from std_srvs.srv import SetBool
 import time
+import json
+import psutil
+from std_msgs.msg import String
 from adafruit_servokit import ServoKit
 
 class ServoController(Node):
@@ -60,6 +63,11 @@ class ServoController(Node):
         # NOWY SERVICE: przełączanie trybu serwa
         self.set_mode_service = self.create_service(SetBool, '/servo/set_manual_mode', self.set_manual_mode_callback)
 
+        # === NOWY PUBLISHER: Health reporting ===
+        self.health_pub = self.create_publisher(String, '/mss/node_health/servo_controller', 10)
+        # === NOWY TIMER: Health reporting co 5 sekund ===
+        self.health_timer = self.create_timer(5.0, self.publish_health)
+
         self.get_logger().info('Servo controller node started.')
         self.get_logger().info(f"Watchdog aktywny. Timeout: {self.watchdog_timeout}s.")
         self.get_logger().info("Tryb automatyczny (watchdog aktywny). Użyj service '/servo/set_manual_mode' aby przełączyć.")
@@ -81,6 +89,61 @@ class ServoController(Node):
         response.success = True
         self.get_logger().info(f"Service zwraca: success={response.success}, message={response.message}")
         return response
+
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            # Sprawdź status sprzętu
+            hardware_status = "OK"
+            try:
+                # Sprawdź czy ServoKit działa
+                self.kit.servo[self.servo_channel].angle
+                hardware_status = "OK"
+            except Exception:
+                hardware_status = "ERROR"
+            
+            # Sprawdź status timerów
+            timers_status = "OK"
+            if not hasattr(self, 'movement_timer') or not hasattr(self, 'publish_timer'):
+                timers_status = "ERROR"
+            
+            # Sprawdź status watchdoga
+            watchdog_status = "ACTIVE" if not self.manual_mode else "DISABLED"
+            
+            # Zbierz dane o błędach i ostrzeżeniach
+            errors = []
+            warnings = []
+            
+            if hardware_status == "ERROR":
+                errors.append("Problem z sprzętem serwa")
+            if timers_status == "ERROR":
+                errors.append("Timery nieaktywne")
+            if self.manual_mode:
+                warnings.append("Tryb ręczny - watchdog wyłączony")
+            
+            # Przygotuj dane health
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': time.time(),
+                'hardware_status': hardware_status,
+                'timers_status': timers_status,
+                'watchdog_status': watchdog_status,
+                'manual_mode': self.manual_mode,
+                'current_angle': self.current_simulated_angle,
+                'target_angle': self.target_angle,
+                'errors': errors,
+                'warnings': warnings,
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            
+            # Opublikuj health status
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
     def set_target_angle_callback(self, msg):
         # Resetujemy czas watchdoga przy każdej nowej komendzie

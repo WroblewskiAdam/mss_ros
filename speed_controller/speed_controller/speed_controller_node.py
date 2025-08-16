@@ -2,10 +2,12 @@
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, String
 from my_robot_interfaces.msg import StampedInt32, GpsRtk, Gear, SpeedControllerState # Zaktualizowany import
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 import time
+import json
+import psutil
 from std_srvs.srv import SetBool
 # NOWY IMPORT: Do obsługi parametrów
 from rcl_interfaces.msg import SetParametersResult
@@ -58,12 +60,16 @@ class SpeedControllerNode(Node):
         self.servo_command_pub = self.create_publisher(StampedInt32, '/servo/set_angle', default_qos)
         # NOWY PUBLISHER: Do danych na wykres (20 Hz)
         self.state_pub = self.create_publisher(SpeedControllerState, '/speed_controller/state', high_freq_qos)
+        # NOWY PUBLISHER: Health reporting
+        self.health_pub = self.create_publisher(String, '/mss/node_health/speed_controller_node', default_qos)
 
         # --- Serwis i Timery ---
         self.controller_timer = self.create_timer(self.dt_controller, self.controller_loop)
         self.enable_service = self.create_service(SetBool, 'speed_controller/set_enabled', self.set_enabled_callback)
         # NOWOŚĆ: Callback do dynamicznej zmiany parametrów
         self.add_on_set_parameters_callback(self.parameters_callback)
+        # NOWY TIMER: Health reporting co 5 sekund
+        self.health_timer = self.create_timer(5.0, self.publish_health)
         
         self.get_logger().info("Węzeł regulatora prędkości PI uruchomiony.")
 
@@ -131,6 +137,54 @@ class SpeedControllerNode(Node):
     def set_servo_to_zero_and_wait(self):
         # ... (bez zmian)
         pass
+
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            # Zbierz metryki systemu
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            memory = psutil.virtual_memory()
+            
+            # Sprawdź błędy i ostrzeżenia
+            errors = []
+            warnings = []
+            
+            # Sprawdź czy węzeł ma problemy
+            if not self.autopilot_enabled:
+                warnings.append("Autopilot wyłączony")
+            
+            if self.clutch_pressed:
+                warnings.append("Sprzęgło wciśnięte")
+            
+            # Sprawdź czy dane są aktualne
+            current_time = time.time()
+            if hasattr(self, 'last_speed_update'):
+                time_since_speed = current_time - self.last_speed_update
+                if time_since_speed > 5.0:
+                    warnings.append(f"Brak aktualizacji prędkości przez {time_since_speed:.1f}s")
+            
+            # Stwórz wiadomość health
+            health_data = {
+                'status': 'running',
+                'last_update': current_time,
+                'errors': errors,
+                'warnings': warnings,
+                'metrics': {
+                    'cpu_usage': cpu_percent,
+                    'memory_usage': memory.percent,
+                    'target_speed': self.target_speed_mps,
+                    'current_speed': self.current_speed_mps,
+                    'autopilot_enabled': self.autopilot_enabled,
+                    'clutch_pressed': self.clutch_pressed
+                }
+            }
+            
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikacji health: {e}")
 
 def main(args=None):
     rclpy.init(args=args)

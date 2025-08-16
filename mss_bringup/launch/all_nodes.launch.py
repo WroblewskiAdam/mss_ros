@@ -145,5 +145,23 @@ def generate_launch_description():
             name='diagnostics_node',
             output='screen',
             emulate_tty=True,
-        ),
-    ])
+                            ),
+                    
+                                # === System Monitor RPi ===
+            Node(
+                package='mss_system_monitor',
+                executable='system_monitor_node',
+                name='system_monitor_node',
+                output='screen',
+                emulate_tty=True,
+            ),
+            
+            # === NOWY SYSTEM: Health Monitor (zamiast watchdog'a) ===
+            Node(
+                package='mss_health_monitor',
+                executable='health_monitor_node',
+                name='mss_health_monitor_node',
+                output='screen',
+                emulate_tty=True,
+            ),
+                ])

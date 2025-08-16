@@ -2,7 +2,11 @@ import rclpy
 from rclpy.node import Node
 # Importujemy naszą nową, niestandardową wiadomość
 from my_robot_interfaces.msg import Gear 
+from std_msgs.msg import String
 import RPi.GPIO as GPIO
+import json
+import psutil
+import time
 
 # --- Konfiguracja pinów GPIO ---
 PIN_CLUTCH = 26   # Sprzęgło
@@ -33,10 +37,61 @@ class GearReaderNode(Node):
         # --- Publisher używający nowej wiadomości 'Gear' ---
         self.publisher_ = self.create_publisher(Gear, 'gears', 10)
         
+        # === NOWY PUBLISHER: Health reporting ===
+        self.health_pub = self.create_publisher(String, '/mss/node_health/gear_reader_node', 10)
+        # === NOWY TIMER: Health reporting co 5 sekund ===
+        self.health_timer = self.create_timer(5.0, self.publish_health)
+        
         timer_period = 0.1  # 10 Hz
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
         self.get_logger().info("Węzeł gotowy. Publikuje na topiku /gears.")
+
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            # Sprawdź status GPIO
+            gpio_status = "OK"
+            try:
+                # Sprawdź czy GPIO jest dostępne
+                GPIO.input(PIN_CLUTCH)
+                gpio_status = "OK"
+            except Exception:
+                gpio_status = "ERROR"
+            
+            # Sprawdź status wątku timer
+            timer_status = "OK" if hasattr(self, 'timer') else "ERROR"
+            
+            # Zbierz dane o błędach i ostrzeżeniach
+            errors = []
+            warnings = []
+            
+            if gpio_status == "ERROR":
+                errors.append("Problem z GPIO")
+            if timer_status == "ERROR":
+                errors.append("Timer nieaktywny")
+            
+            # Przygotuj dane health
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': time.time(),
+                'gpio_status': gpio_status,
+                'timer_status': timer_status,
+                'clutch_pin': PIN_CLUTCH,
+                'gear_pins': list(self.gear_pins.values()),
+                'errors': errors,
+                'warnings': warnings,
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            
+            # Opublikuj health status
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
     def setup_gpio(self):
         """Konfiguruje piny GPIO jako wejścia z rezystorem pull-down."""

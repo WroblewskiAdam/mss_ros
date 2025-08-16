@@ -5,8 +5,12 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 import message_filters
 import numpy as np
+import json
+import psutil
+import time
 # Upewnij się, że nazwa pakietu z wiadomościami jest poprawna
-from my_robot_interfaces.msg import GpsRtk, DistanceMetrics 
+from my_robot_interfaces.msg import GpsRtk, DistanceMetrics
+from std_msgs.msg import String 
 
 class RelativeComputerNode(Node):
     """
@@ -49,6 +53,11 @@ class RelativeComputerNode(Node):
             slop=0.1
         )
         self.time_synchronizer.registerCallback(self.synchronized_callback)
+
+        # === NOWY PUBLISHER: Health reporting ===
+        self.health_pub = self.create_publisher(String, '/mss/node_health/relative_computer_node', 10)
+        # === NOWY TIMER: Health reporting co 5 sekund ===
+        self.health_timer = self.create_timer(5.0, self.publish_health)
 
         self.get_logger().info("Węzeł obliczania pozycji względnej uruchomiony (tryb absolutnego kursu).")
 
@@ -95,6 +104,59 @@ class RelativeComputerNode(Node):
         metrics_msg.distance_lateral = float(dist_lateral)
         
         self.metrics_publisher.publish(metrics_msg)
+
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            # Sprawdź status publisherów
+            publisher_status = "OK" if hasattr(self, 'metrics_publisher') else "ERROR"
+            
+            # Sprawdź status subskrypcji
+            subscription_status = "OK"
+            if not hasattr(self, 'tractor_sub') or not hasattr(self, 'chopper_sub'):
+                subscription_status = "ERROR"
+            
+            # Sprawdź status synchronizatora
+            synchronizer_status = "OK" if hasattr(self, 'time_synchronizer') else "ERROR"
+            
+            # Sprawdź status punktu odniesienia
+            origin_status = "SET" if self.is_origin_set else "NOT_SET"
+            
+            # Zbierz dane o błędach i ostrzeżeniach
+            errors = []
+            warnings = []
+            
+            if publisher_status == "ERROR":
+                errors.append("Publisher nieaktywny")
+            if subscription_status == "ERROR":
+                errors.append("Subskrypcje nieaktywne")
+            if synchronizer_status == "ERROR":
+                errors.append("Synchronizator nieaktywny")
+            if origin_status == "NOT_SET":
+                warnings.append("Punkt odniesienia nie ustawiony")
+            
+            # Przygotuj dane health
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': time.time(),
+                'publisher_status': publisher_status,
+                'subscription_status': subscription_status,
+                'synchronizer_status': synchronizer_status,
+                'origin_status': origin_status,
+                'earth_radius_m': self.R_EARTH,
+                'errors': errors,
+                'warnings': warnings,
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            
+            # Opublikuj health status
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
 
 def main(args=None):
