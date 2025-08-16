@@ -18,7 +18,7 @@ class SystemMonitorNode(Node):
         self.declare_parameter('monitor_interval', 5.0)
         self.declare_parameter('temperature_warning_threshold', 70.0)
         self.declare_parameter('cpu_warning_threshold', 80.0)
-        self.declare_parameter('memory_warning_threshold', 85.0)
+        self.declare_parameter('memory_warning_threshold', 95.0)
         self.declare_parameter('disk_warning_threshold', 90.0)
         
         # Pobierz parametry

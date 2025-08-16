@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateNodeHealthStatus('node_relative_computer', systemData.node_states.relative_computer_node);
                 updateNodeHealthStatus('node_gear_manager', systemData.node_states.gear_manager_node);
                 updateNodeHealthStatus('node_diagnostics', systemData.node_states.diagnostics_node);
-                updateNodeHealthStatus('node_system_monitor', systemData.node_states.system_monitor_node);
+                updateNodeHealthStatus('node_system_monitor', systemData.node_states.system_monitor);
                 updateNodeHealthStatus('node_health_monitor', systemData.node_states.mss_health_monitor_node);
             }
             
