@@ -9,7 +9,6 @@ import time
 import json
 import psutil
 from std_srvs.srv import SetBool
-from std_srvs.srv import SetFloat64
 # NOWY IMPORT: Do obsługi parametrów
 from rcl_interfaces.msg import SetParametersResult
 
@@ -67,7 +66,6 @@ class SpeedControllerNode(Node):
         # --- Serwis i Timery ---
         self.controller_timer = self.create_timer(self.dt_controller, self.controller_loop)
         self.enable_service = self.create_service(SetBool, 'speed_controller/set_enabled', self.set_enabled_callback)
-        self.set_target_speed_service = self.create_service(SetFloat64, 'speed_controller/set_target_speed', self.set_target_speed_callback)
         # NOWOŚĆ: Callback do dynamicznej zmiany parametrów
         self.add_on_set_parameters_callback(self.parameters_callback)
         # NOWY TIMER: Health reporting co 5 sekund
@@ -95,18 +93,6 @@ class SpeedControllerNode(Node):
             self.get_logger().warn("AUTOPILOT DEZAKTYWOWANY.")
             self.set_servo_to_zero_and_wait()
         response.success = True
-        return response
-
-    def set_target_speed_callback(self, request, response):
-        """Service callback do ustawiania prędkości zadanej."""
-        target_speed = request.data
-        if target_speed >= self.v_idle:
-            self.target_speed_mps = target_speed
-            self.get_logger().info(f"Ustawiono prędkość zadaną: {target_speed:.2f} m/s")
-            response.success = True
-        else:
-            self.get_logger().warn(f"Prędkość {target_speed:.2f} m/s jest poniżej minimum {self.v_idle:.2f} m/s")
-            response.success = False
         return response
 
     def target_speed_callback(self, msg): self.target_speed_mps = msg.data if msg.data >= self.v_idle else self.v_idle
@@ -141,14 +127,13 @@ class SpeedControllerNode(Node):
             servo_msg.data = int(round(saturated_control_signal))
             self.servo_command_pub.publish(servo_msg)
 
-        # Publikacja danych na wykres TYLKO gdy autopilot włączony
-        if self.autopilot_enabled:
-            state_msg = SpeedControllerState()
-            state_msg.header.stamp = self.get_clock().now().to_msg()
-            state_msg.setpoint_speed = float(self.target_speed_mps)
-            state_msg.current_speed = float(self.current_speed_mps)
-            state_msg.control_output = float(saturated_control_signal)
-            self.state_pub.publish(state_msg)
+        # Publikacja danych na wykres
+        state_msg = SpeedControllerState()
+        state_msg.header.stamp = self.get_clock().now().to_msg()
+        state_msg.setpoint_speed = float(self.target_speed_mps)
+        state_msg.current_speed = float(self.current_speed_mps)
+        state_msg.control_output = float(saturated_control_signal)
+        self.state_pub.publish(state_msg)
 
     def set_servo_to_zero_and_wait(self):
         # ... (bez zmian)
