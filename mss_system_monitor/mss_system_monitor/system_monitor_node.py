@@ -34,6 +34,9 @@ class SystemMonitorNode(Node):
         # Timer monitoringu
         self.monitor_timer = self.create_timer(self.monitor_interval, self.monitor_system)
         
+        # === NOWY TIMER: Health reporting co 5 sekund ===
+        self.health_timer = self.create_timer(5.0, self.publish_health)
+        
         self.get_logger().info(f"System Monitor RPi uruchomiony. Interwał: {self.monitor_interval}s")
     
     def get_temperature(self):
@@ -180,6 +183,52 @@ class SystemMonitorNode(Node):
             
         except Exception as e:
             self.get_logger().error(f"Błąd podczas monitoringu systemu: {e}")
+
+    def publish_health(self):
+        """Publikuje status zdrowia węzła system monitor."""
+        try:
+            # Sprawdź status timerów
+            monitor_timer_status = "OK" if hasattr(self, 'monitor_timer') else "ERROR"
+            health_timer_status = "OK" if hasattr(self, 'health_timer') else "ERROR"
+            
+            # Sprawdź status publisher'a
+            health_pub_status = "OK" if hasattr(self, 'health_pub') else "ERROR"
+            
+            # Zbierz dane o błędach i ostrzeżeniach
+            errors = []
+            warnings = []
+            
+            if monitor_timer_status == "ERROR":
+                errors.append("Timer monitoringu nieaktywny")
+            if health_timer_status == "ERROR":
+                errors.append("Timer health nieaktywny")
+            if health_pub_status == "ERROR":
+                errors.append("Publisher health nieaktywny")
+            
+            # Przygotuj dane health
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': time.time(),
+                'monitor_timer_status': monitor_timer_status,
+                'health_timer_status': health_timer_status,
+                'health_pub_status': health_pub_status,
+                'monitor_interval': self.monitor_interval,
+                'errors': errors,
+                'warnings': warnings,
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            
+            # Opublikuj health status
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+            
+            # === DEBUG: Logowanie publikacji ===
+            self.get_logger().info(f"📤 HEALTH PUBLISHED: {health_data['status']}")
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
 def main(args=None):
     rclpy.init(args=args)

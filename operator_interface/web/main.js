@@ -722,4 +722,229 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     // ====================================================
+    
+    // === NOWE SUBSKRYPCJE DIAGNOSTYCZNE ===
+    
+    // 1. System Status - ogólny status systemu MSS
+    const systemStatusListener = new ROSLIB.Topic({
+        ros: ros,
+        name: '/mss/system_status',
+        messageType: 'std_msgs/msg/String'
+    });
+
+    systemStatusListener.subscribe((message) => {
+        try {
+            const systemData = JSON.parse(message.data);
+            
+            // Aktualizacja ogólnego statusu systemu
+            updateText('overall_system_status', systemData.overall_status, systemData.overall_status === 'OK');
+            updateInt('active_nodes_count', systemData.running_nodes);
+            updateInt('error_nodes_count', systemData.error_nodes);
+            updateText('health_last_update', new Date().toLocaleTimeString());
+            
+            // Aktualizacja statusu poszczególnych węzłów
+            if (systemData.node_states) {
+                updateNodeHealthStatus('node_gps_rtk', systemData.node_states.gps_rtk_node);
+                updateNodeHealthStatus('node_bt_receiver', systemData.node_states.bt_receiver_node);
+                updateNodeHealthStatus('node_gear_reader', systemData.node_states.gear_reader_node);
+                updateNodeHealthStatus('node_servo_controller', systemData.node_states.servo_controller);
+                updateNodeHealthStatus('node_gear_shifter', systemData.node_states.gear_shifter);
+                updateNodeHealthStatus('node_speed_filter', systemData.node_states.speed_filter_node);
+                updateNodeHealthStatus('node_speed_controller', systemData.node_states.speed_controller_node);
+                updateNodeHealthStatus('node_relative_computer', systemData.node_states.relative_computer_node);
+                updateNodeHealthStatus('node_gear_manager', systemData.node_states.gear_manager_node);
+                updateNodeHealthStatus('node_diagnostics', systemData.node_states.diagnostics_node);
+                updateNodeHealthStatus('node_system_monitor', systemData.node_states.system_monitor_node);
+                updateNodeHealthStatus('node_health_monitor', systemData.node_states.mss_health_monitor_node);
+            }
+            
+        } catch (error) {
+            console.error('Błąd parsowania system status:', error);
+        }
+    });
+
+    // 2. Health Alerts - alerty o problemach
+    const healthAlertsListener = new ROSLIB.Topic({
+        ros: ros,
+        name: '/mss/health_alerts',
+        messageType: 'std_msgs/msg/String'
+    });
+
+    healthAlertsListener.subscribe((message) => {
+        try {
+            const alertData = JSON.parse(message.data);
+            
+            // Aktualizacja alertów
+            updateText('last_alert', alertData.message);
+            updateText('alert_level', alertData.level);
+            updateText('alert_timestamp', new Date(alertData.timestamp).toLocaleString());
+            
+            // Zwiększ licznik alertów
+            const currentCount = parseInt(document.getElementById('alerts_count').textContent) || 0;
+            updateInt('alerts_count', currentCount + 1);
+            
+            // Pokaż powiadomienie
+            showNotification(`Alert: ${alertData.message}`, alertData.level.toLowerCase());
+            
+        } catch (error) {
+            console.error('Błąd parsowania health alerts:', error);
+        }
+    });
+
+    // 3. System Monitor - monitoring RPi
+    const systemMonitorListener = new ROSLIB.Topic({
+        ros: ros,
+        name: '/mss/node_health/system_monitor',
+        messageType: 'std_msgs/msg/String'
+    });
+
+    systemMonitorListener.subscribe((message) => {
+        try {
+            const monitorData = JSON.parse(message.data);
+            
+            if (monitorData.metrics) {
+                const metrics = monitorData.metrics;
+                
+                // Aktualizacja metryk systemu
+                updateFloat('system_cpu', metrics.cpu_usage_percent, 1);
+                updateFloat('system_ram', metrics.memory_usage_percent, 1);
+                updateFloat('system_temp', metrics.temperature_celsius, 1);
+                updateFloat('system_disk', metrics.disk_usage_percent, 1);
+                
+                // Konwersja uptime na godziny
+                const uptimeHours = (metrics.uptime_seconds / 3600).toFixed(1);
+                updateText('system_uptime', uptimeHours);
+                
+                // Status komponentów
+                updateText('system_gpio', metrics.gpio_status);
+                updateText('system_network', metrics.network_status);
+                
+                // Status USB/Serial
+                if (typeof metrics.usb_serial_status === 'object') {
+                    const usbStatus = `${metrics.usb_serial_status.usb_devices} USB, ${metrics.usb_serial_status.serial_ports.join(', ')}`;
+                    updateText('system_usb_serial', usbStatus);
+                } else {
+                    updateText('system_usb_serial', metrics.usb_serial_status);
+                }
+                
+                // Aktualizacja statusu połączeń na podstawie metryk
+                updateConnectionStatus('gps_rtk_status', metrics.gpio_status === 'OK');
+                updateConnectionStatus('bluetooth_status', metrics.network_status.includes('OK'));
+                
+                // Ostatnia aktualizacja
+                updateText('last_update', new Date().toLocaleTimeString());
+            }
+            
+        } catch (error) {
+            console.error('Błąd parsowania system monitor:', error);
+        }
+    });
+
+    // 4. Node Health - status poszczególnych węzłów
+    const nodeHealthTopics = [
+        'gps_rtk_node',
+        'bt_receiver_node',
+        'gear_reader_node',
+        'servo_controller',
+        'gear_shifter',
+        'speed_filter_node',
+        'speed_controller_node',
+        'relative_computer_node',
+        'gear_manager_node',
+        'diagnostics_node'
+    ];
+
+    // Tworzenie subskrypcji dla każdego węzła
+    nodeHealthTopics.forEach(nodeName => {
+        const topicName = `/mss/node_health/${nodeName}`;
+        const listener = new ROSLIB.Topic({
+            ros: ros,
+            name: topicName,
+            messageType: 'std_msgs/msg/String'
+        });
+
+        listener.subscribe((message) => {
+            try {
+                const healthData = JSON.parse(message.data);
+                
+                // Aktualizacja statusu węzła w czasie rzeczywistym
+                updateNodeHealthRealTime(nodeName, healthData);
+                
+            } catch (error) {
+                console.error(`Błąd parsowania health dla ${nodeName}:`, error);
+            }
+        });
+    });
+
+    // === FUNKCJE POMOCNICZE DLA DIAGNOSTYKI ===
+    
+    function updateNodeHealthStatus(elementId, status) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = status || 'UNKNOWN';
+            element.className = 'detail-value';
+            
+            // Dodanie klasy CSS dla kolorowania
+            if (status === 'running') {
+                element.classList.add('value-ok');
+            } else if (status === 'error' || status === 'timeout') {
+                element.classList.add('value-bad');
+            } else if (status === 'warning') {
+                element.classList.add('value-warning');
+            } else {
+                element.classList.add('value-info');
+            }
+        }
+    }
+    
+    function updateNodeHealthRealTime(nodeName, healthData) {
+        // Aktualizacja w czasie rzeczywistym - można dodać dodatkowe funkcje
+        // np. wykresy, logi, etc.
+        console.log(`Health update for ${nodeName}:`, healthData);
+    }
+    
+    function updateConnectionStatus(elementId, isConnected) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            if (isConnected) {
+                element.textContent = 'OK';
+                element.className = 'detail-value value-ok';
+            } else {
+                element.textContent = 'BŁĄD';
+                element.className = 'detail-value value-bad';
+            }
+        }
+    }
+    
+    // Inicjalizacja informacji o systemie
+    function initializeSystemInfo() {
+        // Informacje o ROS
+        updateText('ros_version', 'ROS2 Humble');
+        updateText('system_arch', 'ARM64 (Raspberry Pi)');
+        updateText('rpi_model', 'Raspberry Pi 4B');
+        
+        // Status ROS Bridge
+        updateConnectionStatus('ros_bridge_status', ros.isConnected);
+        
+        // Nasłuchiwanie zmian połączenia ROS
+        ros.on('connection', () => {
+            updateConnectionStatus('ros_bridge_status', true);
+            showNotification('Połączono z ROS Bridge', 'success');
+        });
+        
+        ros.on('error', () => {
+            updateConnectionStatus('ros_bridge_status', false);
+            showNotification('Błąd połączenia z ROS Bridge', 'error');
+        });
+        
+        ros.on('close', () => {
+            updateConnectionStatus('ros_bridge_status', false);
+            showNotification('Rozłączono z ROS Bridge', 'warning');
+        });
+    }
+    
+    // Inicjalizacja systemu diagnostycznego
+    initializeSystemInfo();
+    
+    // === KONIEC SUBSKRYPCJI DIAGNOSTYCZNYCH ===
 });
