@@ -75,32 +75,19 @@
         <!-- Zakładka Regulatora -->
         <div id="TabController" class="tab-content">
             <div class="controller-panel">
-                <!-- NOWA SEKCJA: Kontrola Regulatora Prędkości -->
-                <div class="speed-controller-control-section">
-                    <h3>🚜 Kontrola Regulatora Prędkości</h3>
-                    <div class="speed-controller-control-content">
-                        <div class="control-group">
-                            <label>Status Regulatora:</label>
-                            <div class="status-display" id="controller-status">Nieaktywny</div>
-                        </div>
-                        <div class="control-group">
-                            <label>Regulacja Prędkości:</label>
-                            <div class="toggle-group">
-                                <button id="toggle-speed-controller-btn" class="btn-toggle btn-toggle-off">WYŁĄCZONA</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="chart-header">
-                    <h2>Wykres Pracy Regulatora</h2>
-                    <button id="settings-btn" class="btn-settings">⚙️ Nastawy</button>
-                </div>
-                
-                <!-- NOWA SEKCJA: Ustawianie prędkości zadanej -->
+                <!-- NOWA SEKCJA: Ustawianie prędkości zadanej + Kontrola regulatora -->
                 <div class="speed-control-section">
                     <h3>🎯 Ustawianie Prędkości Zadanej</h3>
                     <div class="speed-control-content">
+                        <!-- NOWA: Kompaktowa kontrola regulatora prędkości -->
+                        <div class="speed-controller-compact">
+                            <div class="speed-controller-status">
+                                <div class="status-led" id="speed-controller-led"></div>
+                                <span class="status-text">Regulator Prędkości</span>
+                            </div>
+                            <button id="toggle-speed-controller-btn" class="btn-toggle btn-toggle-off">WYŁĄCZONA</button>
+                        </div>
+                        
                         <div class="speed-input-group-large">
                             <label for="target-speed-regulator">Prędkość zadana:</label>
                             <div class="speed-input-container">
@@ -114,6 +101,11 @@
                             <span class="speed-value" id="current-speed-display">--- m/s</span>
                         </div>
                     </div>
+                </div>
+                
+                <div class="chart-header">
+                    <h2>Wykres Pracy Regulatora</h2>
+                    <button id="settings-btn" class="btn-settings">⚙️ Nastawy</button>
                 </div>
                 
                 <div class="chart-container">

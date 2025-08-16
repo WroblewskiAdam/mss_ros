@@ -329,6 +329,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-disabled';
                 toggleSpeedControllerBtn.title = 'Autopilot aktywny - użyj głównego przycisku do wyłączenia';
             }
+            
+            // NOWA: Aktualizuj diodę LED - regulator włączony przez autopilot
+            if (speedControllerLed) {
+                speedControllerLed.className = 'status-led on';
+            }
         } else {
             autopilotStatusDiv.className = 'status-indicator status-off';
             autopilotStatusDiv.textContent = 'AUTOPILOT WYŁĄCZONY';
@@ -344,6 +349,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
                 }
                 toggleSpeedControllerBtn.title = '';
+            }
+            
+            // NOWA: Aktualizuj diodę LED - regulator wyłączony przez autopilot
+            if (speedControllerLed) {
+                speedControllerLed.className = 'status-led off';
             }
         }
     }
@@ -459,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Elementy UI zakładki Control
-    const controllerStatus = document.getElementById('controller-status');
+    const speedControllerLed = document.getElementById('speed-controller-led');
     const toggleSpeedControllerBtn = document.getElementById('toggle-speed-controller-btn');
     const gearManagerStatus = document.getElementById('gear-manager-status');
     const toggleGearManagerBtn = document.getElementById('toggle-gear-manager-btn');
@@ -689,16 +699,9 @@ document.addEventListener('DOMContentLoaded', () => {
     diagnosticsListener.subscribe((message) => {
         // Aktualizacja statusu regulatora
         if (message.target_speed.data !== PLACEHOLDER_FLOAT) {
-            controllerStatus.textContent = 'AKTYWNY';
-            controllerStatus.className = 'status-display active';
-            
-            // NOWE: Aktualizacja wyświetlacza prędkości w zakładce Regulator
-            const speedKmh = (message.target_speed.data * 3.6).toFixed(1);
-            currentSpeedDisplay.textContent = `${speedKmh} km/h`;
+            speedControllerLed.className = 'status-led on';
         } else {
-            controllerStatus.textContent = 'NIEAKTYWNY';
-            controllerStatus.className = 'status-display inactive';
-            currentSpeedDisplay.textContent = '--- km/h';
+            speedControllerLed.className = 'status-led off';
         }
 
         // Aktualizacja statusu gear manager (symulacja - w rzeczywistości potrzebujesz osobnego topiku)
@@ -754,6 +757,11 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
         toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
     }
+    
+    // NOWA: Inicjalizacja diody LED regulatora
+    if (speedControllerLed) {
+        speedControllerLed.className = 'status-led off';
+    }
 
     // NOWA: Sprawdź aktualny stan regulatora prędkości na starcie
     checkSpeedControllerStatus();
@@ -771,6 +779,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (toggleSpeedControllerBtn) {
                 toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
                 toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
+            }
+            
+            // NOWA: Aktualizuj diodę LED
+            if (speedControllerLed) {
+                speedControllerLed.className = 'status-led off';
             }
         });
     }
@@ -795,11 +808,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-on';
                         showNotification('Regulacja prędkości włączona', 'success');
                         updateLastCommand('Włączono regulację prędkości');
+                        
+                        // NOWA: Aktualizuj diodę LED
+                        if (speedControllerLed) {
+                            speedControllerLed.className = 'status-led on';
+                        }
                     } else {
                         toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
                         toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
                         showNotification('Regulacja prędkości wyłączona', 'warning');
                         updateLastCommand('Wyłączono regulację prędkości');
+                        
+                        // NOWA: Aktualizuj diodę LED
+                        if (speedControllerLed) {
+                            speedControllerLed.className = 'status-led off';
+                        }
                     }
                 } else {
                     showNotification("Nie udało się zmienić stanu regulatora prędkości!", 'error');
