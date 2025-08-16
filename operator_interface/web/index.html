@@ -345,202 +345,278 @@
 
         <!-- NOWA ZAKŁADKA: System -->
         <div id="TabSystem" class="tab-content">
-            <div class="details-grid">
-                <!-- Monitoring Systemu RPi -->
-                <div class="detail-section">
-                    <h3>🖥️ Monitoring Systemu RPi</h3>
-                    <div class="detail-content">
-                        <div class="detail-item">
-                            <span class="detail-label">CPU:</span>
-                            <span class="detail-value" id="system_cpu">---</span>
-                            <span class="detail-unit">%</span>
+            <!-- Dashboard Systemu -->
+            <div class="system-dashboard">
+                <!-- Karty metryk systemowych -->
+                <div class="metrics-grid">
+                    <div class="metric-card cpu-card">
+                        <div class="metric-icon">🖥️</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="system_cpu">---</div>
+                            <div class="metric-label">CPU</div>
+                            <div class="metric-unit">%</div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">RAM:</span>
-                            <span class="detail-value" id="system_ram">---</span>
-                            <span class="detail-unit">%</span>
+                    </div>
+                    
+                    <div class="metric-card memory-card">
+                        <div class="metric-icon">💾</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="system_ram">---</div>
+                            <div class="metric-label">RAM</div>
+                            <div class="metric-unit">%</div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Temperatura:</span>
-                            <span class="detail-value" id="system_temp">---</span>
-                            <span class="detail-unit">°C</span>
+                    </div>
+                    
+                    <div class="metric-card temp-card">
+                        <div class="metric-icon">🌡️</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="system_temp">---</div>
+                            <div class="metric-label">Temperatura</div>
+                            <div class="metric-unit">°C</div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Dysk:</span>
-                            <span class="detail-value" id="system_disk">---</span>
-                            <span class="detail-unit">%</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Uptime:</span>
-                            <span class="detail-value" id="system_uptime">---</span>
-                            <span class="detail-unit">h</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Status GPIO:</span>
-                            <span class="detail-value" id="system_gpio">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Status Sieci:</span>
-                            <span class="detail-value" id="system_network">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Porty USB/Serial:</span>
-                            <span class="detail-value" id="system_usb_serial">---</span>
+                    </div>
+                    
+                    <div class="metric-card disk-card">
+                        <div class="metric-icon">💿</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="system_disk">---</div>
+                            <div class="metric-label">Dysk</div>
+                            <div class="metric-unit">%</div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Status Połączeń -->
-                <div class="detail-section">
-                    <h3>🔌 Status Połączeń</h3>
-                    <div class="detail-content">
-                        <div class="detail-item">
-                            <span class="detail-label">ROS Bridge:</span>
-                            <span class="detail-value" id="ros_bridge_status">---</span>
+                
+                <!-- Szczegółowe informacje systemowe -->
+                <div class="system-details-grid">
+                    <div class="system-info-card">
+                        <div class="card-header">
+                            <h3>🕐 Informacje o Systemie</h3>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">GPS RTK:</span>
-                            <span class="detail-value" id="gps_rtk_status">---</span>
+                        <div class="card-content">
+                            <div class="info-item">
+                                <span class="info-label">Uptime:</span>
+                                <span class="info-value" id="system_uptime">---</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Wersja ROS:</span>
+                                <span class="info-value" id="ros_version">---</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Architektura:</span>
+                                <span class="info-value" id="system_arch">---</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Model RPi:</span>
+                                <span class="info-value" id="rpi_model">---</span>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Bluetooth:</span>
-                            <span class="detail-value" id="bluetooth_status">---</span>
+                    </div>
+                    
+                    <div class="system-status-card">
+                        <div class="card-header">
+                            <h3>🔌 Status Komponentów</h3>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">IMU:</span>
-                            <span class="detail-value" id="imu_status">---</span>
+                        <div class="card-content">
+                            <div class="status-item">
+                                <span class="status-label">GPIO:</span>
+                                <span class="status-value" id="system_gpio">---</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Sieć:</span>
+                                <span class="status-value" id="system_network">---</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">USB/Serial:</span>
+                                <span class="status-value" id="system_usb_serial">---</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">ROS Bridge:</span>
+                                <span class="status-value" id="ros_bridge_status">---</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Informacje o Systemie -->
-                <div class="detail-section">
-                    <h3>ℹ️ Informacje o Systemie</h3>
-                    <div class="detail-content">
-                        <div class="detail-item">
-                            <span class="detail-label">Wersja ROS:</span>
-                            <span class="detail-value" id="ros_version">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Architektura:</span>
-                            <span class="detail-value" id="system_arch">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Model RPi:</span>
-                            <span class="detail-value" id="rpi_model">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Ostatnia Aktualizacja:</span>
-                            <span class="detail-value" id="last_update">---</span>
-                        </div>
-                    </div>
+                
+                <!-- Wykresy systemowe -->
+                <div class="system-charts">
+                    <!-- Usunięto wykres wydajności systemu -->
                 </div>
             </div>
         </div>
 
         <!-- NOWA ZAKŁADKA: Health -->
         <div id="TabHealth" class="tab-content">
-            <div class="details-grid">
-                <!-- Ogólny Status Systemu -->
-                <div class="detail-section">
-                    <h3>🏥 Ogólny Status Systemu</h3>
-                    <div class="detail-content">
-                        <div class="detail-item">
-                            <span class="detail-label">Status Ogólny:</span>
-                            <span class="detail-value" id="overall_system_status">---</span>
+            <div class="health-dashboard">
+                <!-- Karty statusu systemu -->
+                <div class="health-overview-grid">
+                    <div class="health-summary-card">
+                        <div class="summary-header">
+                            <h3>🏥 Status Systemu MSS</h3>
+                            <div class="summary-indicator" id="overall_health_indicator">
+                                <span class="indicator-dot"></span>
+                                <span class="indicator-text">Sprawdzanie...</span>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Węzły Aktywne:</span>
-                            <span class="detail-value" id="active_nodes_count">---</span>
-                            <span class="detail-unit">/ 12</span>
+                        <div class="summary-stats">
+                            <div class="stat-item">
+                                <div class="stat-number" id="active_nodes_count">0</div>
+                                <div class="stat-label">Węzły Aktywne</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="error_nodes_count">0</div>
+                                <div class="stat-label">Błędy</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number" id="warning_nodes_count">0</div>
+                                <div class="stat-label">Ostrzeżenia</div>
+                            </div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Węzły z Błędami:</span>
-                            <span class="detail-value" id="error_nodes_count">---</span>
+                    </div>
+                    
+                    <div class="health-alerts-card">
+                        <div class="card-header">
+                            <h3>⚠️ Ostatnie Alerty</h3>
+                            <button class="clear-alerts-btn">Wyczyść</button>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Ostatnia Aktualizacja:</span>
-                            <span class="detail-value" id="health_last_update">---</span>
+                        <div class="alerts-list" id="alerts_list">
+                            <div class="no-alerts">Brak aktywnych alertów</div>
+                        </div>
+                        <div class="alerts-summary">
+                            <span>Liczba alertów: <strong id="alerts_count">0</strong></span>
                         </div>
                     </div>
                 </div>
-
-                <!-- Status Poszczególnych Węzłów -->
-                <div class="detail-section">
-                    <h3>🔍 Status Węzłów</h3>
-                    <div class="detail-content">
-                        <div class="detail-item">
-                            <span class="detail-label">GPS RTK Node:</span>
-                            <span class="detail-value" id="node_gps_rtk">---</span>
+                
+                <!-- Status węzłów w formie kart -->
+                <div class="nodes-status-grid">
+                    <h3>🔍 Status Węzłów ROS</h3>
+                    <div class="nodes-grid">
+                        <div class="node-card" data-node="gps_rtk_node">
+                            <div class="node-info">
+                                <div class="node-name">GPS RTK</div>
+                                <div class="node-status" id="node_gps_rtk">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">BT Receiver:</span>
-                            <span class="detail-value" id="node_bt_receiver">---</span>
+                        
+                        <div class="node-card" data-node="bt_receiver_node">
+                            <div class="node-info">
+                                <div class="node-name">BT Receiver</div>
+                                <div class="node-status" id="node_bt_receiver">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Gear Reader:</span>
-                            <span class="detail-value" id="node_gear_reader">---</span>
+                        
+                        <div class="node-card" data-node="gear_reader_node">
+                            <div class="node-info">
+                                <div class="node-name">Gear Reader</div>
+                                <div class="node-status" id="node_gear_reader">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Servo Controller:</span>
-                            <span class="detail-value" id="node_servo_controller">---</span>
+                        
+                        <div class="node-card" data-node="servo_controller">
+                            <div class="node-info">
+                                <div class="node-name">Servo Controller</div>
+                                <div class="node-status" id="node_servo_controller">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Gear Shifter:</span>
-                            <span class="detail-value" id="node_gear_shifter">---</span>
+                        
+                        <div class="node-card" data-node="gear_shifter">
+                            <div class="node-info">
+                                <div class="node-name">Gear Shifter</div>
+                                <div class="node-status" id="node_gear_shifter">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Speed Filter:</span>
-                            <span class="detail-value" id="node_speed_filter">---</span>
+                        
+                        <div class="node-card" data-node="speed_filter_node">
+                            <div class="node-info">
+                                <div class="node-name">Speed Filter</div>
+                                <div class="node-status" id="node_speed_filter">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Speed Controller:</span>
-                            <span class="detail-value" id="node_speed_controller">---</span>
+                        
+                        <div class="node-card" data-node="speed_controller_node">
+                            <div class="node-info">
+                                <div class="node-name">Speed Controller</div>
+                                <div class="node-status" id="node_speed_controller">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Relative Computer:</span>
-                            <span class="detail-value" id="node_relative_computer">---</span>
+                        
+                        <div class="node-card" data-node="relative_computer_node">
+                            <div class="node-info">
+                                <div class="node-name">Relative Computer</div>
+                                <div class="node-status" id="node_relative_computer">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Gear Manager:</span>
-                            <span class="detail-value" id="node_gear_manager">---</span>
+                        
+                        <div class="node-card" data-node="gear_manager_node">
+                            <div class="node-info">
+                                <div class="node-name">Gear Manager</div>
+                                <div class="node-status" id="node_gear_manager">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Diagnostics:</span>
-                            <span class="detail-value" id="node_diagnostics">---</span>
+                        
+                        <div class="node-card" data-node="diagnostics_node">
+                            <div class="node-info">
+                                <div class="node-name">Diagnostics</div>
+                                <div class="node-status" id="node_diagnostics">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">System Monitor:</span>
-                            <span class="detail-value" id="node_system_monitor">---</span>
+                        
+                        <div class="node-card" data-node="system_monitor">
+                            <div class="node-info">
+                                <div class="node-name">System Monitor</div>
+                                <div class="node-status" id="node_system_monitor">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Health Monitor:</span>
-                            <span class="detail-value" id="node_health_monitor">---</span>
+                        
+                        <div class="node-card" data-node="mss_health_monitor_node">
+                            <div class="node-info">
+                                <div class="node-name">Health Monitor</div>
+                                <div class="node-status" id="node_mss_health_monitor">---</div>
+                            </div>
+                            <div class="node-health-indicator"></div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Alerty i Ostrzeżenia -->
-                <div class="detail-section">
-                    <h3>⚠️ Alerty i Ostrzeżenia</h3>
-                    <div class="detail-content">
-                        <div class="detail-item">
-                            <span class="detail-label">Ostatni Alert:</span>
-                            <span class="detail-value" id="last_alert">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Poziom Alertu:</span>
-                            <span class="detail-value" id="alert_level">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Liczba Alertów:</span>
-                            <span class="detail-value" id="alerts_count">---</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Czas Alertu:</span>
-                            <span class="detail-value" id="alert_timestamp">---</span>
+                
+                <!-- Konsola logów -->
+                <div class="logs-console-section">
+                    <div class="console-header">
+                        <h3>📝 Konsola Logów Systemu</h3>
+                        <div class="console-controls">
+                            <button class="console-btn" id="clear-logs-btn">Wyczyść</button>
+                            <button class="console-btn" id="export-logs-btn">Eksportuj</button>
+                            <select id="log-level-filter">
+                                <option value="all">Wszystkie poziomy</option>
+                                <option value="info">Info</option>
+                                <option value="warning">Warning</option>
+                                <option value="error">Error</option>
+                            </select>
                         </div>
                     </div>
+                    <div class="console-container">
+                        <div class="console-output" id="console_output">
+                            <div class="console-line">
+                                <span class="log-timestamp">[System]</span>
+                                <span class="log-message">Konsola logów gotowa...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Wykresy health -->
+                <div class="health-charts">
+                    <!-- Usunięto wykres statusu węzłów -->
                 </div>
             </div>
         </div>

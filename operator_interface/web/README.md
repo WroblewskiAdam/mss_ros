@@ -1,146 +1,187 @@
-# 🚜 MSS Operator Interface
+# MSS Operator Interface - Nowoczesny Dashboard
 
-Nowoczesny, mobilny interfejs webowy dla systemu synchronizacji ciągnika rolniczego ze sieczkarnią.
+## 🎯 **Zakładka System - Dashboard Metryk**
 
-## ✨ Funkcje
+### **Karty Metryk Systemowych**
+- **CPU** 🖥️ - Użycie procesora w czasie rzeczywistym z mini wykresem
+- **RAM** 💾 - Użycie pamięci z trendem
+- **Temperatura** 🌡️ - Monitorowanie temperatury RPi
+- **Dysk** 💿 - Użycie przestrzeni dyskowej
 
-- **📱 Responsywny design** - optymalizowany dla telefonów w trybie pionowym
-- **🌐 Komunikacja ROS2** - przez rosbridge_server
-- **📊 Wizualizacja w czasie rzeczywistym** - pozycja względna, prędkość, status
-- **⚙️ Kontrola autopilota** - włączanie/wyłączanie systemu
-- **📈 Wykresy regulatora** - monitoring pracy regulatora PI
-- **🔧 Nastawy regulatora** - dynamiczna zmiana parametrów Kp/Ki
+### **Informacje Systemowe**
+- **Uptime** - Czas pracy systemu
+- **Wersja ROS** - Informacje o ROS2
+- **Architektura** - Szczegóły systemu
+- **Model RPi** - Informacje o Raspberry Pi
 
-## 🚀 Szybkie uruchomienie
+### **Status Komponentów**
+- **GPIO** - Status pinów GPIO
+- **Sieć** - Status połączeń sieciowych
+- **USB/Serial** - Dostępne porty
+- **ROS Bridge** - Status połączenia z ROS
 
-### Opcja 1: Automatyczne uruchomienie (zalecane)
-```bash
-cd ~/mss_ros/install/operator_interface/share/operator_interface/web/
-./start_interface.sh
-```
-
-### Opcja 2: Ręczne uruchomienie
-```bash
-# Terminal 1: Uruchom rosbridge_server
-ros2 launch rosbridge_server rosbridge_websocket_launch.xml
-
-# Terminal 2: Uruchom serwer HTTP
-cd ~/mss_ros/install/operator_interface/share/operator_interface/web/
-python3 -m http.server 8000
-```
-
-## 📱 Dostęp do interfejsu
-
-Otwórz przeglądarkę i przejdź do:
-- **Lokalnie**: `http://localhost:8000`
-- **Z sieci**: `http://[IP_RPI]:8000`
-
-## 🎯 Zakładki interfejsu
-
-### 🏠 Główna
-- **Wizualizacja 2D** - pozycja ciągnika względem sieczkarni z ładnymi symbolami SVG
-- **Symbole pojazdów** - ciągnik z przyczepą i sieczkarnia z detalami
-- **Strzałki prędkości** - obracają się zgodnie z kierunkiem ruchu
-- **Etykiety prędkości** - wyświetlają aktualną prędkość w km/h
-- **Kluczowe dane** - odległości, prędkości w czasie rzeczywistym
-- **Status połączenia** - stan komunikacji z ROS2
-
-### 📊 Regulator
-- **Wykres pracy** - prędkość zadana, aktualna i sterowanie
-- **🎯 Ustawianie prędkości zadanej** - pole input + przycisk ustawienia
-- **Wyświetlacz aktualnej prędkości** - monitoring w czasie rzeczywistym
-- **Nastawy** - przycisk otwierający modal z parametrami Kp/Ki
-- **Pełnoekranowy wykres** - optymalny do analizy
-
-### 🎮 Control
-- **🚜 Kontrola Regulatora Prędkości** - status, włączanie/wyłączanie regulacji
-- **⚙️ Kontrola Biegów** - status gear manager, automatyczne/rzęczne zarządzanie, zmiana biegów
-- **🎮 Ręczne Sterowanie Serwem** - ustawianie pozycji, szybkie pozycje (lewo/środek/prawo)
-- **📊 Status Systemu** - połączenie ROS, ostatnie komendy, status serwa
-- **Ręczne sterowanie** - bezpośrednie zarządzanie systemem
-
-### 🔍 Szczegóły
-- **🔧 Status Systemu** - połączenie BT, status RTK
-- **🚜 Ciągnik** - prędkość, biegi, sprzęgło, serwo, pozycja GPS, wysokość, kurs, czas GPS
-- **🌾 Sieczkarnia** - prędkość, pozycja GPS, wysokość, kurs, czas GPS
-- **📍 Pozycja Względna** - odległości wzdłużne i poprzeczne
-
-## ⚙️ Konfiguracja
-
-### Adres ROS Bridge
-W pliku `main.js` linia 4:
-```javascript
-const ROS_BRIDGE_URL = 'ws://192.168.138.7:9090';
-```
-
-### Rozdzielczość danych
-- **GPS (lat/lon)**: 10 miejsc po przecinku
-- **Prędkość**: 4 miejsca po przecinku
-- **Kurs**: 4 miejsca po przecinku
-- **Odległości**: 2 miejsca po przecinku
-- **Wysokość**: 2 miejsca po przecinku
-
-## 🛠️ Rozwój
-
-### Struktura plików
-```
-web/
-├── index.html          # Struktura HTML
-├── style.css           # Style CSS (nowoczesne, mobilne)
-├── main.js             # Logika JavaScript
-├── start_interface.sh  # Skrypt uruchamiania
-└── README.md           # Ta dokumentacja
-```
-
-### Technologie
-- **HTML5** - semantyczna struktura
-- **CSS3** - Grid, Flexbox, CSS Variables, Media Queries
-- **JavaScript ES6+** - nowoczesna składnia
-- **Chart.js** - wykresy w czasie rzeczywistym
-- **ROSLIB.js** - komunikacja z ROS2
-
-## 📱 Responsywność
-
-Interfejs automatycznie dostosowuje się do:
-- **Desktop** (>768px) - układ poziomy
-- **Tablet** (768px) - układ mieszany
-- **Telefon** (<480px) - układ pionowy, większe elementy
-
-## 🔧 Rozwiązywanie problemów
-
-### Interfejs nie łączy się z ROS2
-1. Sprawdź czy `rosbridge_server` jest uruchomiony
-2. Sprawdź adres IP w `main.js`
-3. Sprawdź firewall i dostępność portu 9090
-
-### Dane nie są aktualizowane
-1. Sprawdź czy topik `/diagnostics` jest publikowany
-2. Sprawdź logi w konsoli przeglądarki (F12)
-3. Sprawdź połączenie WebSocket
-
-### Problemy z responsywnością
-1. Odśwież stronę (Ctrl+F5)
-2. Sprawdź czy viewport meta tag jest poprawny
-3. Sprawdź CSS media queries
-
-## 📞 Wsparcie
-
-W przypadku problemów:
-1. Sprawdź logi w konsoli przeglądarki
-2. Sprawdź logi ROS2: `ros2 topic echo /diagnostics`
-3. Sprawdź status usług: `systemctl status rosbridge_server`
-
-## 🔄 Aktualizacje
-
-Aby zaktualizować interfejs:
-```bash
-cd ~/mss_ros/src
-colcon build --packages-select operator_interface
-source install/setup.bash
-```
+### **Wykresy Systemowe**
+- **Wykres Wydajności** - CPU, RAM, temperatura w czasie
+- **Kontrolki Czasu** - 1h, 6h, 24h
+- **Aktualizacja w czasie rzeczywistym**
 
 ---
 
-**Autor**: Adam Wróblewski  
-**Wersja**: 2.0  
-**Data**: $(date)
+## 🏥 **Zakładka Health - Dashboard Monitorowania**
+
+### **Status Systemu MSS**
+- **Wskaźnik Ogólny** - Kolorowy status systemu (OK/WARNING/ERROR)
+- **Statystyki** - Liczba węzłów aktywnych, błędów, ostrzeżeń
+- **Aktualizacja w czasie rzeczywistym**
+
+### **Status Węzłów ROS**
+- **Karty Węzłów** - Każdy węzeł ma własną kartę z ikoną
+- **Wskaźniki Health** - Kolorowe kropki statusu
+- **Ikony Tematyczne** - 🛰️ GPS, 📱 Bluetooth, ⚙️ Biegi, 🎛️ Serwo
+- **Status w czasie rzeczywistym**
+
+### **Konsola Logów Systemu**
+- **Filtrowanie** - Poziom logów (Info, Warning, Error)
+- **Kontrolki** - Wyczyść, Eksportuj
+- **Formatowanie** - Kolorowe logi według poziomu
+- **Autoscroll** - Automatyczne przewijanie do najnowszych
+
+### **Wykresy Health**
+- **Status Węzłów** - Trend aktywnych/błędnych/ostrzeżeń
+- **Kontrolki Czasu** - 1h, 6h, 24h
+- **Aktualizacja w czasie rzeczywistym**
+
+---
+
+## 🚀 **Funkcje Dashboard**
+
+### **Wykresy Mini**
+- Każda karta metryki ma mini wykres trendu
+- Maksymalnie 20 punktów danych
+- Aktualizacja w czasie rzeczywistym
+- Animowane przejścia
+
+### **Responsywność**
+- **Desktop** - Grid 4 kolumny dla metryk
+- **Tablet** - Grid 2 kolumny
+- **Mobile** - Grid 1 kolumna
+- **Adaptacyjne** - Automatyczne dostosowanie
+
+### **Interaktywność**
+- **Hover Effects** - Karty unoszą się przy najechaniu
+- **Animacje** - Płynne przejścia i transformacje
+- **Kontrolki** - Przyciski i selektory
+- **Filtry** - Filtrowanie logów i danych
+
+---
+
+## 🔧 **Technologie**
+
+### **Frontend**
+- **HTML5** - Semantyczna struktura
+- **CSS3** - Grid, Flexbox, Animacje
+- **JavaScript ES6+** - Moduły, async/await
+- **Chart.js** - Wykresy interaktywne
+
+### **Integracja ROS**
+- **roslib.js** - ROS2 Bridge
+- **WebSocket** - Komunikacja w czasie rzeczywistym
+- **JSON** - Parsowanie wiadomości ROS
+- **Health Topics** - Subskrypcje statusu
+
+---
+
+## 📱 **Użycie**
+
+### **Monitoring Systemu**
+1. Przejdź do zakładki **System**
+2. Sprawdź karty metryk (CPU, RAM, temperatura, dysk)
+3. Przejrzyj szczegółowe informacje systemowe
+4. Analizuj wykresy wydajności
+
+### **Monitoring Health**
+1. Przejdź do zakładki **Health**
+2. Sprawdź ogólny status systemu MSS
+3. Przejrzyj status poszczególnych węzłów
+4. Monitoruj logi w konsoli
+5. Analizuj trendy w wykresach
+
+### **Konsola Logów**
+1. **Filtruj** - Wybierz poziom logów
+2. **Czyść** - Usuń stare logi
+3. **Eksportuj** - Pobierz logi jako plik TXT
+4. **Monitoruj** - Obserwuj logi w czasie rzeczywistym
+
+---
+
+## 🎨 **Design System**
+
+### **Kolory**
+- **Primary** - #3498db (niebieski)
+- **Success** - #27ae60 (zielony)
+- **Warning** - #f39c12 (pomarańczowy)
+- **Error** - #e74c3c (czerwony)
+- **Info** - #95a5a6 (szary)
+
+### **Typografia**
+- **Nagłówki** - Montserrat, 1.3em
+- **Tekst** - Open Sans, 1em
+- **Konsola** - Courier New, monospace
+- **Ikony** - Emoji i Font Awesome
+
+### **Spacing**
+- **Padding** - 20px (desktop), 15px (mobile)
+- **Gap** - 20px (desktop), 15px (mobile)
+- **Margin** - 30px (sekcje), 15px (elementy)
+
+---
+
+## 🔄 **Aktualizacje**
+
+### **Częstotliwość**
+- **Metryki Systemowe** - Co 5 sekund
+- **Status Węzłów** - Co 5 sekund
+- **Wykresy** - W czasie rzeczywistym
+- **Logi** - Natychmiastowo
+
+### **Źródła Danych**
+- **System Monitor** - `/mss/node_health/system_monitor`
+- **Health Monitor** - `/mss/system_status`
+- **Node Health** - `/mss/node_health/{node_name}`
+- **Health Alerts** - `/mss/health_alerts`
+
+---
+
+## 🐛 **Rozwiązywanie Problemów**
+
+### **Wykresy nie działają**
+- Sprawdź czy Chart.js jest załadowany
+- Sprawdź konsolę przeglądarki
+- Upewnij się że canvas ma odpowiednie ID
+
+### **Dane nie aktualizują się**
+- Sprawdź połączenie ROS Bridge
+- Sprawdź czy topiki są aktywne
+- Sprawdź logi węzłów ROS
+
+### **Responsywność nie działa**
+- Sprawdź CSS media queries
+- Sprawdź czy viewport meta tag jest ustawiony
+- Przetestuj na różnych urządzeniach
+
+---
+
+## 📈 **Rozwój**
+
+### **Planowane Funkcje**
+- **Eksport Wykresów** - PNG, PDF
+- **Alerty Push** - Powiadomienia przeglądarki
+- **Historia Danych** - Długoterminowe trendy
+- **Konfiguracja** - Ustawienia dashboard
+- **Tematy** - Jasny/ciemny motyw
+
+### **Optymalizacje**
+- **Lazy Loading** - Wykresy ładowane na żądanie
+- **Web Workers** - Przetwarzanie danych w tle
+- **Service Worker** - Offline support
+- **PWA** - Progressive Web App

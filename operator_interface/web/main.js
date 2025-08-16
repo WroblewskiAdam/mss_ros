@@ -318,6 +318,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateInt(id, value) {
         const el = document.getElementById(id);
         if (el) {
+            // Sprawdź czy to element statystyk systemu MSS - jeśli tak, nie nadpisuj className
+            if (id === 'active_nodes_count' || id === 'error_nodes_count' || id === 'warning_nodes_count') {
+                el.textContent = value;
+                // Zachowaj oryginalne klasy CSS
+                return;
+            }
+            
+            // Dla innych elementów - standardowa logika
             if (value === PLACEHOLDER_INT) {
                 el.textContent = 'TIMEOUT';
                 el.className = 'value-bad';
@@ -736,26 +744,30 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const systemData = JSON.parse(message.data);
             
+            // === NOWA FUNKCJA: Użycie updateOverallHealthStatus z dashboard ===
+            updateOverallHealthStatus(systemData);
+            
+            // === STARA FUNKCJA: Zachowuję dla kompatybilności ===
             // Aktualizacja ogólnego statusu systemu
-            updateText('overall_system_status', systemData.overall_status, systemData.overall_status === 'OK');
+            updateText('overall_system_status', systemData.overall_status);
             updateInt('active_nodes_count', systemData.running_nodes);
             updateInt('error_nodes_count', systemData.error_nodes);
-            updateText('health_last_update', new Date().toLocaleTimeString());
+            updateText('health_last_update', new Date(systemData.timestamp).toLocaleString());
             
             // Aktualizacja statusu poszczególnych węzłów
             if (systemData.node_states) {
-                updateNodeHealthStatus('node_gps_rtk', systemData.node_states.gps_rtk_node);
-                updateNodeHealthStatus('node_bt_receiver', systemData.node_states.bt_receiver_node);
-                updateNodeHealthStatus('node_gear_reader', systemData.node_states.gear_reader_node);
-                updateNodeHealthStatus('node_servo_controller', systemData.node_states.servo_controller);
-                updateNodeHealthStatus('node_gear_shifter', systemData.node_states.gear_shifter);
-                updateNodeHealthStatus('node_speed_filter', systemData.node_states.speed_filter_node);
-                updateNodeHealthStatus('node_speed_controller', systemData.node_states.speed_controller_node);
-                updateNodeHealthStatus('node_relative_computer', systemData.node_states.relative_computer_node);
-                updateNodeHealthStatus('node_gear_manager', systemData.node_states.gear_manager_node);
-                updateNodeHealthStatus('node_diagnostics', systemData.node_states.diagnostics_node);
-                updateNodeHealthStatus('node_system_monitor', systemData.node_states.system_monitor);
-                updateNodeHealthStatus('node_health_monitor', systemData.node_states.mss_health_monitor_node);
+                updateNodeHealthStatus('gps_rtk_node', systemData.node_states.gps_rtk_node);
+                updateNodeHealthStatus('bt_receiver_node', systemData.node_states.bt_receiver_node);
+                updateNodeHealthStatus('gear_reader_node', systemData.node_states.gear_reader_node);
+                updateNodeHealthStatus('servo_controller', systemData.node_states.servo_controller);
+                updateNodeHealthStatus('gear_shifter', systemData.node_states.gear_shifter);
+                updateNodeHealthStatus('speed_filter_node', systemData.node_states.speed_filter_node);
+                updateNodeHealthStatus('speed_controller_node', systemData.node_states.speed_controller_node);
+                updateNodeHealthStatus('relative_computer_node', systemData.node_states.relative_computer_node);
+                updateNodeHealthStatus('gear_manager_node', systemData.node_states.gear_manager_node);
+                updateNodeHealthStatus('diagnostics_node', systemData.node_states.diagnostics_node);
+                updateNodeHealthStatus('system_monitor', systemData.node_states.system_monitor);
+                updateNodeHealthStatus('mss_health_monitor_node', systemData.node_states.mss_health_monitor_node);
             }
             
         } catch (error) {
@@ -802,6 +814,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const monitorData = JSON.parse(message.data);
             
+            // === NOWA FUNKCJA: Użycie updateSystemMetrics z dashboard ===
+            updateSystemMetrics(monitorData);
+            
+            // === STARA FUNKCJA: Zachowuję dla kompatybilności ===
             if (monitorData.metrics) {
                 const metrics = monitorData.metrics;
                 
@@ -851,7 +867,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'speed_controller_node',
         'relative_computer_node',
         'gear_manager_node',
-        'diagnostics_node'
+        'diagnostics_node',
+        'system_monitor',
+        'mss_health_monitor_node'
     ];
 
     // Tworzenie subskrypcji dla każdego węzła
@@ -867,6 +885,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const healthData = JSON.parse(message.data);
                 
+                // === NOWA FUNKCJA: Użycie updateNodeHealthStatus z dashboard ===
+                updateNodeHealthStatus(nodeName, healthData);
+                
+                // === STARA FUNKCJA: Zachowuję dla kompatybilności ===
                 // Aktualizacja statusu węzła w czasie rzeczywistym
                 updateNodeHealthRealTime(nodeName, healthData);
                 
@@ -947,4 +969,244 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSystemInfo();
     
     // === KONIEC SUBSKRYPCJI DIAGNOSTYCZNYCH ===
+
+    // === NOWE FUNKCJE DLA DASHBOARD SYSTEM I HEALTH ===
+    
+    // Inicjalizacja dashboard (bez wykresów)
+    let dashboardInitialized = false;
+    
+    // Aktualizacja metryk systemowych
+    function updateSystemMetrics(healthData) {
+        try {
+            const metrics = healthData.metrics || {};
+            
+            // Aktualizacja wartości
+            if (metrics.cpu_usage_percent !== undefined) {
+                document.getElementById('system_cpu').textContent = metrics.cpu_usage_percent.toFixed(1);
+            }
+            
+            if (metrics.memory_usage_percent !== undefined) {
+                document.getElementById('system_ram').textContent = metrics.memory_usage_percent.toFixed(1);
+            }
+            
+            if (metrics.temperature_celsius !== undefined) {
+                document.getElementById('system_temp').textContent = metrics.temperature_celsius.toFixed(1);
+            }
+            
+            if (metrics.disk_usage_percent !== undefined) {
+                document.getElementById('system_disk').textContent = metrics.disk_usage_percent.toFixed(1);
+            }
+            
+            if (metrics.uptime_seconds !== undefined) {
+                const hours = Math.floor(metrics.uptime_seconds / 3600);
+                document.getElementById('system_uptime').textContent = hours;
+            }
+            
+            // Aktualizacja statusów
+            if (metrics.gpio_status) {
+                document.getElementById('system_gpio').textContent = metrics.gpio_status;
+            }
+            
+            if (metrics.network_status) {
+                document.getElementById('system_network').textContent = metrics.network_status;
+            }
+            
+            if (metrics.usb_serial_status) {
+                const status = metrics.usb_serial_status;
+                if (typeof status === 'object') {
+                    document.getElementById('system_usb_serial').textContent = 
+                        `USB: ${status.usb_devices}, Serial: ${status.serial_ports.join(', ')}`;
+                }
+            }
+            
+        } catch (error) {
+            console.error('Błąd aktualizacji metryk systemowych:', error);
+        }
+    }
+    
+    // Aktualizacja statusu health węzłów
+    function updateNodeHealthStatus(nodeName, healthData) {
+        try {
+            // Sprawdź czy healthData to string (status) czy obiekt (pełne dane)
+            let status = 'unknown';
+            if (typeof healthData === 'string') {
+                status = healthData;
+            } else if (healthData && healthData.status) {
+                status = healthData.status;
+            }
+            
+            // Znajdź element statusu węzła
+            const statusElement = document.getElementById(`node_${nodeName.replace('_node', '')}`);
+            const indicatorElement = document.querySelector(`[data-node="${nodeName}"] .node-health-indicator`);
+            
+            if (statusElement) {
+                statusElement.textContent = status;
+            }
+            
+            if (indicatorElement) {
+                indicatorElement.className = `node-health-indicator ${status}`;
+            }
+            
+            // Aktualizacja konsoli logów tylko jeśli mamy pełne dane
+            if (healthData && typeof healthData === 'object') {
+                addLogMessage(nodeName, status, healthData);
+            }
+            
+        } catch (error) {
+            console.error(`Błąd aktualizacji statusu węzła ${nodeName}:`, error);
+        }
+    }
+    
+    // Dodawanie wiadomości do konsoli logów
+    function addLogMessage(nodeName, status, healthData) {
+        const consoleOutput = document.getElementById('console_output');
+        if (!consoleOutput) return;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        const logLine = document.createElement('div');
+        logLine.className = 'console-line';
+        
+        let message = `Węzeł ${nodeName}: ${status}`;
+        let logClass = 'info';
+        
+        if (status === 'error') {
+            logClass = 'error';
+            if (healthData.errors && healthData.errors.length > 0) {
+                message += ` - ${healthData.errors.join(', ')}`;
+            }
+        } else if (status === 'warning' || (healthData.warnings && healthData.warnings.length > 0)) {
+            logClass = 'warning';
+            if (healthData.warnings && healthData.warnings.length > 0) {
+                message += ` - ${healthData.warnings.join(', ')}`;
+            }
+        }
+        
+        logLine.innerHTML = `
+            <span class="log-timestamp">[${timestamp}]</span>
+            <span class="log-message ${logClass}">${message}</span>
+        `;
+        
+        consoleOutput.appendChild(logLine);
+        
+        // Ogranicz liczbę linii w konsoli
+        while (consoleOutput.children.length > 100) {
+            consoleOutput.removeChild(consoleOutput.firstChild);
+        }
+    }
+    
+    // Aktualizacja ogólnego statusu health
+    function updateOverallHealthStatus(healthData) {
+        try {
+            const overallStatus = healthData.overall_status || 'UNKNOWN';
+            const indicator = document.getElementById('overall_health_indicator');
+            const indicatorDot = indicator.querySelector('.indicator-dot');
+            const indicatorText = indicator.querySelector('.indicator-text');
+            
+            // Aktualizacja wskaźnika
+            indicatorDot.className = 'indicator-dot';
+            if (overallStatus === 'OK') {
+                indicatorDot.style.background = '#27ae60';
+                indicatorText.textContent = 'OK';
+            } else if (overallStatus === 'WARNING') {
+                indicatorDot.style.background = '#f39c12';
+                indicatorText.textContent = 'OSTRZEŻENIE';
+            } else if (overallStatus === 'ERROR') {
+                indicatorDot.style.background = '#e74c3c';
+                indicatorText.textContent = 'BŁĄD';
+            } else {
+                indicatorDot.style.background = '#95a5a6';
+                indicatorText.textContent = 'UNKNOWN';
+            }
+            
+            // Aktualizacja statystyk
+            if (healthData.total_nodes !== undefined) {
+                updateInt('active_nodes_count', healthData.running_nodes || 0);
+                updateInt('error_nodes_count', healthData.error_nodes || 0);
+                updateInt('warning_nodes_count', 
+                    (healthData.total_nodes - (healthData.running_nodes || 0) - (healthData.error_nodes || 0)) || 0);
+            }
+            
+        } catch (error) {
+            console.error('Błąd aktualizacji ogólnego statusu health:', error);
+        }
+    }
+    
+    // Inicjalizacja kontrolek konsoli
+    function initializeConsoleControls() {
+        const clearLogsBtn = document.getElementById('clear-logs-btn');
+        const exportLogsBtn = document.getElementById('export-logs-btn');
+        const logLevelFilter = document.getElementById('log-level-filter');
+        
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener('click', () => {
+                const consoleOutput = document.getElementById('console_output');
+                if (consoleOutput) {
+                    consoleOutput.innerHTML = `
+                        <div class="console-line">
+                            <span class="log-timestamp">[System]</span>
+                            <span class="log-message">Konsola logów wyczyszczona...</span>
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        if (exportLogsBtn) {
+            exportLogsBtn.addEventListener('click', () => {
+                const consoleOutput = document.getElementById('console_output');
+                if (consoleOutput) {
+                    const logs = Array.from(consoleOutput.children).map(line => {
+                        const timestamp = line.querySelector('.log-timestamp').textContent;
+                        const message = line.querySelector('.log-message').textContent;
+                        return `${timestamp} ${message}`;
+                    }).join('\n');
+                    
+                    const blob = new Blob([logs], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `mss_logs_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            });
+        }
+        
+        if (logLevelFilter) {
+            logLevelFilter.addEventListener('change', (e) => {
+                const selectedLevel = e.target.value;
+                const consoleOutput = document.getElementById('console_output');
+                
+                if (consoleOutput && selectedLevel !== 'all') {
+                    Array.from(consoleOutput.children).forEach(line => {
+                        const message = line.querySelector('.log-message');
+                        if (message.classList.contains(selectedLevel)) {
+                            line.style.display = 'block';
+                        } else {
+                            line.style.display = 'none';
+                        }
+                    });
+                } else if (consoleOutput) {
+                    Array.from(consoleOutput.children).forEach(line => {
+                        line.style.display = 'block';
+                    });
+                }
+            });
+        }
+    }
+    
+    // Inicjalizacja dashboard po załadowaniu DOM
+    function initializeDashboard() {
+        if (dashboardInitialized) return;
+        
+        initializeConsoleControls();
+        
+        // Dodaj pierwsze logi
+        addLogMessage('System', 'info', { message: 'Dashboard zainicjalizowany' });
+        
+        dashboardInitialized = true;
+    }
+    
+    // Wywołaj inicjalizację dashboard
+    initializeDashboard();
 });
