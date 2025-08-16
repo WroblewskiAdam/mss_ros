@@ -123,9 +123,9 @@ class SpeedControllerNode(Node):
         # Publikacja danych na wykres
         state_msg = SpeedControllerState()
         state_msg.header.stamp = self.get_clock().now().to_msg()
-        state_msg.setpoint_speed = self.target_speed_mps
-        state_msg.current_speed = self.current_speed_mps
-        state_msg.control_output = saturated_control_signal
+        state_msg.setpoint_speed = float(self.target_speed_mps)
+        state_msg.current_speed = float(self.current_speed_mps)
+        state_msg.control_output = float(saturated_control_signal)
         self.state_pub.publish(state_msg)
 
     def set_servo_to_zero_and_wait(self):

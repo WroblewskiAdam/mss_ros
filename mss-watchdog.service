@@ -1,0 +1,17 @@
+[Unit]
+Description=MSS System Watchdog
+After=mss-master.service
+Requires=mss-master.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/mss_ros/src
+ExecStart=/home/pi/mss_ros/src/mss_watchdog.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
