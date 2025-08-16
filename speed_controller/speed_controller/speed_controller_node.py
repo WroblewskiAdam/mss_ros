@@ -120,11 +120,12 @@ class SpeedControllerNode(Node):
             self.integral_sum = 0.0
             saturated_control_signal = self.servo_min_angle
 
-        # Publikacja komendy do serwa
-        servo_msg = StampedInt32()
-        servo_msg.header.stamp = self.get_clock().now().to_msg()
-        servo_msg.data = int(round(saturated_control_signal))
-        self.servo_command_pub.publish(servo_msg)
+        # Publikacja komendy do serwa TYLKO gdy autopilot włączony
+        if self.autopilot_enabled:
+            servo_msg = StampedInt32()
+            servo_msg.header.stamp = self.get_clock().now().to_msg()
+            servo_msg.data = int(round(saturated_control_signal))
+            self.servo_command_pub.publish(servo_msg)
 
         # Publikacja danych na wykres
         state_msg = SpeedControllerState()

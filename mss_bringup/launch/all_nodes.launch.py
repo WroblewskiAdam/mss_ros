@@ -55,6 +55,7 @@
 
 
 from launch import LaunchDescription
+from launch.actions import TimerAction
 from launch_ros.actions import Node
 
 def generate_launch_description():
@@ -148,20 +149,30 @@ def generate_launch_description():
                             ),
                     
                                 # === System Monitor RPi ===
-            Node(
-                package='mss_system_monitor',
-                executable='system_monitor_node',
-                name='system_monitor_node',
-                output='screen',
-                emulate_tty=True,
+            TimerAction(
+                period=5.0,  # 3 sekundy delay
+                actions=[
+                    Node(
+                        package='mss_system_monitor',
+                        executable='system_monitor_node',
+                        name='system_monitor_node',
+                        output='screen',
+                        emulate_tty=True,
+                    )
+                ]
             ),
             
             # === NOWY SYSTEM: Health Monitor (zamiast watchdog'a) ===
-            Node(
-                package='mss_health_monitor',
-                executable='health_monitor_node',
-                name='mss_health_monitor_node',
-                output='screen',
-                emulate_tty=True,
+            TimerAction(
+                period=10.0,  # 5 sekund delay
+                actions=[
+                    Node(
+                        package='mss_health_monitor',
+                        executable='health_monitor_node',
+                        name='mss_health_monitor_node',
+                        output='screen',
+                        emulate_tty=True,
+                    )
+                ]
             ),
                 ])
