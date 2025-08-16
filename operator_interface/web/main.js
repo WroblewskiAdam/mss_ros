@@ -6,6 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const PLACEHOLDER_INT = 99999;
     const CHART_MAX_DATA_POINTS = 100;
 
+    // --- Zmienne stanu systemu ---
+    let isAutopilotOn = false;           // Główny autopilot (regulator prędkości + pozycji)
+    let isSpeedControllerEnabled = false; // Regulator prędkości
+    let isPositionControllerEnabled = false; // Regulator pozycji (na razie nieistniejący)
+
     // --- Inicjalizacja ROS ---
     const ros = new ROSLIB.Ros({ url: ROS_BRIDGE_URL });
 
@@ -82,9 +87,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('settings-modal');
     const settingsBtn = document.getElementById('settings-btn');
     const closeBtn = document.querySelector('.close');
+    
+
 
     settingsBtn.onclick = () => modal.style.display = 'block';
     closeBtn.onclick = () => modal.style.display = 'none';
+    
+
     window.onclick = (event) => {
         if (event.target === modal) modal.style.display = 'none';
     };
@@ -97,18 +106,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     stateListener.subscribe((message) => {
-        const now = new Date(message.header.stamp.sec * 1000 + message.header.stamp.nanosec / 1000000);
-        
-        controllerChart.data.labels.push(now);
-        controllerChart.data.datasets[0].data.push(message.setpoint_speed);
-        controllerChart.data.datasets[1].data.push(message.current_speed);
-        controllerChart.data.datasets[2].data.push(message.control_output);
+        // Aktualizuj wykres TYLKO gdy regulator prędkości jest włączony
+        if (isSpeedControllerEnabled) {
+            const now = new Date(message.header.stamp.sec * 1000 + message.header.stamp.nanosec / 1000000);
+            
+            controllerChart.data.labels.push(now);
+            controllerChart.data.datasets[0].data.push(message.setpoint_speed);
+            controllerChart.data.datasets[1].data.push(message.current_speed);
+            controllerChart.data.datasets[2].data.push(message.control_output);
 
-        if (controllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
-            controllerChart.data.labels.shift();
-            controllerChart.data.datasets.forEach(dataset => dataset.data.shift());
+            if (controllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
+                controllerChart.data.labels.shift();
+                controllerChart.data.datasets.forEach(dataset => dataset.data.shift());
+            }
+            controllerChart.update('none');
         }
-        controllerChart.update('none');
     });
 
     // --- Subskrypcja danych o niskiej częstotliwości (dla paneli) ---
@@ -259,18 +271,46 @@ document.addEventListener('DOMContentLoaded', () => {
         serviceType: 'std_srvs/srv/SetBool'
     });
 
-    let isAutopilotOn = false;
+    // --- NOWY: Serwis dla regulatora prędkości ---
+    const setSpeedControllerClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/speed_controller/set_enabled',
+        serviceType: 'std_srvs/srv/SetBool'
+    });
+
     toggleAutopilotBtn.onclick = () => {
         const targetState = !isAutopilotOn;
         const request = new ROSLIB.ServiceRequest({ data: targetState });
         setAutopilotClient.callService(request, (result) => {
             if (result.success) {
                 isAutopilotOn = targetState;
+                
+                // NOWA LOGIKA: Główny autopilot automatycznie włącza regulator prędkości
+                if (isAutopilotOn) {
+                    // Autopilot włączony - automatycznie włącz regulator prędkości
+                    isSpeedControllerEnabled = true;
+                    
+                    // Aktualizuj UI regulatora prędkości
+                    if (toggleSpeedControllerBtn) {
+                        toggleSpeedControllerBtn.textContent = 'WŁĄCZONA';
+                        toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-on';
+                    }
+                    
+                    showNotification('Autopilot aktywowany - regulator prędkości automatycznie włączony', 'success');
+                } else {
+                    // Autopilot wyłączony - wyłącz wszystkie regulatory
+                    isSpeedControllerEnabled = false;
+                    
+                    // Aktualizuj UI regulatora prędkości
+                    if (toggleSpeedControllerBtn) {
+                        toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
+                        toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
+                    }
+                    
+                    showNotification('Autopilot dezaktywowany - wszystkie regulatory wyłączone', 'warning');
+                }
+                
                 updateAutopilotUI();
-                showNotification(
-                    isAutopilotOn ? 'Autopilot aktywowany' : 'Autopilot dezaktywowany', 
-                    isAutopilotOn ? 'success' : 'warning'
-                );
             } else {
                 showNotification("Nie udało się zmienić stanu autopilota!", 'error');
             }
@@ -283,11 +323,28 @@ document.addEventListener('DOMContentLoaded', () => {
             autopilotStatusDiv.textContent = 'AUTOPILOT AKTYWNY';
             toggleAutopilotBtn.className = 'btn-disengage';
             toggleAutopilotBtn.textContent = 'DEZAKTYWUJ';
+            
+            // NOWA: Przycisk regulatora prędkości jest zablokowany gdy autopilot aktywny
+            if (toggleSpeedControllerBtn) {
+                toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-disabled';
+                toggleSpeedControllerBtn.title = 'Autopilot aktywny - użyj głównego przycisku do wyłączenia';
+            }
         } else {
             autopilotStatusDiv.className = 'status-indicator status-off';
             autopilotStatusDiv.textContent = 'AUTOPILOT WYŁĄCZONY';
             toggleAutopilotBtn.className = 'btn-engage';
             toggleAutopilotBtn.textContent = 'AKTYWUJ';
+            
+            // NOWA: Przycisk regulatora prędkości jest aktywny gdy autopilot wyłączony
+            if (toggleSpeedControllerBtn) {
+                // Przywróć normalny wygląd przycisku
+                if (isSpeedControllerEnabled) {
+                    toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-on';
+                } else {
+                    toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
+                }
+                toggleSpeedControllerBtn.title = '';
+            }
         }
     }
 
@@ -380,12 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- NOWA SEKCJA: Logika zakładki Control ---
     
-    // Klienci usług dla kontroli
-    const setSpeedClient = new ROSLIB.Service({
-        ros: ros,
-        name: '/speed_controller/set_target_speed',
-        serviceType: 'std_srvs/srv/SetFloat64'
-    });
+    // Klienci usług dla kontroli (setSpeedClient usunięty - używamy topiku)
 
     const gearShiftUpClient = new ROSLIB.Service({
         ros: ros,
@@ -527,15 +579,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const request = new ROSLIB.ServiceRequest({ data: targetSpeed });
-        setSpeedClient.callService(request, (result) => {
-            if (result.success) {
-                showNotification(`Prędkość zadana ustawiona na ${targetSpeed} m/s`, 'success');
-                updateLastCommand(`Ustaw prędkość: ${targetSpeed} m/s`);
-            } else {
-                showNotification('Błąd podczas ustawiania prędkości!', 'error');
-            }
+        // Publikuj na topik /target_speed (tak jak speed_teleop_node)
+        const speedMsg = new ROSLIB.Message({
+            data: targetSpeed
         });
+        
+        const speedPublisher = new ROSLIB.Topic({
+            ros: ros,
+            name: '/target_speed',
+            messageType: 'std_msgs/msg/Float64'
+        });
+        
+        speedPublisher.publish(speedMsg);
+        showNotification(`Prędkość zadana ustawiona na ${targetSpeed} m/s`, 'success');
+        updateLastCommand(`Ustaw prędkość: ${targetSpeed} m/s`);
     };
 
     // NOWA: Sterowanie serwem
@@ -692,22 +749,62 @@ document.addEventListener('DOMContentLoaded', () => {
     // NOWA: Inicjalizacja UI serwa
     updateServoModeUI();
 
-    // --- Logika przełącznika regulatora prędkości ---
-    let isSpeedControllerEnabled = false;
-    
-    toggleSpeedControllerBtn.onclick = () => {
-        isSpeedControllerEnabled = !isSpeedControllerEnabled;
+    // NOWA: Inicjalizacja UI regulatora prędkości
+    if (toggleSpeedControllerBtn) {
+        toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
+        toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
+    }
+
+    // NOWA: Sprawdź aktualny stan regulatora prędkości na starcie
+    checkSpeedControllerStatus();
+
+    // NOWA: Funkcja do sprawdzania aktualnego stanu regulatora prędkości
+    function checkSpeedControllerStatus() {
+        // Sprawdź aktualny stan regulatora prędkości przez serwis
+        const request = new ROSLIB.ServiceRequest({ data: false }); // false = sprawdź stan
         
-        if (isSpeedControllerEnabled) {
-            toggleSpeedControllerBtn.textContent = 'WŁĄCZONA';
-            toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-on';
-            showNotification('Regulacja prędkości włączona', 'success');
-            updateLastCommand('Włączono regulację prędkości');
+        setSpeedControllerClient.callService(request, (result) => {
+            // TODO: W przyszłości serwis powinien zwracać aktualny stan
+            // Na razie zakładamy że regulator jest wyłączony na starcie
+            isSpeedControllerEnabled = false;
+            
+            if (toggleSpeedControllerBtn) {
+                toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
+                toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
+            }
+        });
+    }
+
+    // --- Logika przełącznika regulatora prędkości ---
+    toggleSpeedControllerBtn.onclick = () => {
+        if (isAutopilotOn) {
+            // Gdy autopilot włączony - nie można ręcznie wyłączyć regulatora
+            showNotification('Autopilot aktywny - użyj głównego przycisku autopilota do wyłączenia', 'warning');
+            updateLastCommand('Próba ręcznego wyłączenia regulatora przy aktywnym autopilocie');
         } else {
-            toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
-            toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
-            showNotification('Regulacja prędkości wyłączona', 'warning');
-            updateLastCommand('Wyłączono regulację prędkości');
+            // Gdy autopilot wyłączony - można swobodnie włączać/wyłączać regulator
+            const targetState = !isSpeedControllerEnabled;
+            const request = new ROSLIB.ServiceRequest({ data: targetState });
+            
+            setSpeedControllerClient.callService(request, (result) => {
+                if (result.success) {
+                    isSpeedControllerEnabled = targetState;
+                    
+                    if (isSpeedControllerEnabled) {
+                        toggleSpeedControllerBtn.textContent = 'WŁĄCZONA';
+                        toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-on';
+                        showNotification('Regulacja prędkości włączona', 'success');
+                        updateLastCommand('Włączono regulację prędkości');
+                    } else {
+                        toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
+                        toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
+                        showNotification('Regulacja prędkości wyłączona', 'warning');
+                        updateLastCommand('Wyłączono regulację prędkości');
+                    }
+                } else {
+                    showNotification("Nie udało się zmienić stanu regulatora prędkości!", 'error');
+                }
+            });
         }
     };
 

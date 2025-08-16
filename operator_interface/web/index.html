@@ -75,6 +75,23 @@
         <!-- Zakładka Regulatora -->
         <div id="TabController" class="tab-content">
             <div class="controller-panel">
+                <!-- NOWA SEKCJA: Kontrola Regulatora Prędkości -->
+                <div class="speed-controller-control-section">
+                    <h3>🚜 Kontrola Regulatora Prędkości</h3>
+                    <div class="speed-controller-control-content">
+                        <div class="control-group">
+                            <label>Status Regulatora:</label>
+                            <div class="status-display" id="controller-status">Nieaktywny</div>
+                        </div>
+                        <div class="control-group">
+                            <label>Regulacja Prędkości:</label>
+                            <div class="toggle-group">
+                                <button id="toggle-speed-controller-btn" class="btn-toggle btn-toggle-off">WYŁĄCZONA</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="chart-header">
                     <h2>Wykres Pracy Regulatora</h2>
                     <button id="settings-btn" class="btn-settings">⚙️ Nastawy</button>
@@ -108,23 +125,6 @@
         <!-- Zakładka Control -->
         <div id="TabControl" class="tab-content">
             <div class="control-grid">
-                <!-- Kontrola Regulatora Prędkości -->
-                <div class="control-section">
-                    <h3>🚜 Kontrola Regulatora Prędkości</h3>
-                    <div class="control-content">
-                        <div class="control-group">
-                            <label>Status Regulatora:</label>
-                            <div class="status-display" id="controller-status">Nieaktywny</div>
-                        </div>
-                        <div class="control-group">
-                            <label>Regulacja Prędkości:</label>
-                            <div class="toggle-group">
-                                <button id="toggle-speed-controller-btn" class="btn-toggle btn-toggle-off">WYŁĄCZONA</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Kontrola Biegów -->
                 <div class="control-section">
                     <h3>⚙️ Kontrola Biegów</h3>
