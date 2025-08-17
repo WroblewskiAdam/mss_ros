@@ -11,6 +11,7 @@ import psutil
 from std_srvs.srv import SetBool
 # NOWY IMPORT: Do obsługi parametrów
 from rcl_interfaces.msg import SetParametersResult
+from rcl_interfaces.srv import SetParameters
 
 class SpeedControllerNode(Node):
     def __init__(self):
@@ -19,6 +20,7 @@ class SpeedControllerNode(Node):
         # --- Deklaracja parametrów ---
         self.declare_parameter('kp', 10.00)
         self.declare_parameter('ki', 20.00)
+        self.declare_parameter('kd', 0.00)  # Dodany parametr Kd
         # ... (reszta parametrów bez zmian)
         self.declare_parameter('v_idle', 1.3359)
         self.declare_parameter('servo_min_angle', 0)
@@ -30,6 +32,7 @@ class SpeedControllerNode(Node):
         # --- Pobranie parametrów ---
         self.Kp = self.get_parameter('kp').get_parameter_value().double_value
         self.Ki = self.get_parameter('ki').get_parameter_value().double_value
+        self.Kd = self.get_parameter('kd').get_parameter_value().double_value  # Dodane pobieranie Kd
         # ... (reszta pobierania parametrów bez zmian)
         self.v_idle = self.get_parameter('v_idle').get_parameter_value().double_value
         self.servo_min_angle = self.get_parameter('servo_min_angle').get_parameter_value().integer_value
@@ -66,23 +69,82 @@ class SpeedControllerNode(Node):
         # --- Serwis i Timery ---
         self.controller_timer = self.create_timer(self.dt_controller, self.controller_loop)
         self.enable_service = self.create_service(SetBool, 'speed_controller/set_enabled', self.set_enabled_callback)
+        # NOWY SERWIS: Do ręcznego ustawiania parametrów
+        self.set_parameters_service = self.create_service(SetParameters, 'speed_controller_node/set_parameters', self.set_parameters_service_callback)
         # NOWOŚĆ: Callback do dynamicznej zmiany parametrów
         self.add_on_set_parameters_callback(self.parameters_callback)
         # NOWY TIMER: Health reporting co 5 sekund
         self.health_timer = self.create_timer(5.0, self.publish_health)
+        # USUNIĘTO: Timer publikowania parametrów co 5 sekund
         
         self.get_logger().info("Węzeł regulatora prędkości PI uruchomiony.")
+
+    def update_parameter_and_variable(self, param_name, value, variable_name):
+        """Aktualizuje zmienną wewnętrzną."""
+        try:
+            # Aktualizuj zmienną wewnętrzną
+            setattr(self, variable_name, value)
+            self.get_logger().info(f"Zaktualizowano {param_name} na: {value}")
+            return True
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas aktualizacji {param_name}: {e}")
+            return False
 
     def parameters_callback(self, params):
         """Ten callback jest automatycznie wywoływany, gdy ktoś zmieni parametry węzła."""
         for param in params:
             if param.name == "kp":
-                self.Kp = param.value
-                self.get_logger().info(f"Zmieniono Kp na: {self.Kp}")
+                self.update_parameter_and_variable('kp', param.value, 'Kp')
             elif param.name == "ki":
-                self.Ki = param.value
-                self.get_logger().info(f"Zmieniono Ki na: {self.Ki}")
+                self.update_parameter_and_variable('ki', param.value, 'Ki')
+            elif param.name == "kd":
+                self.update_parameter_and_variable('kd', param.value, 'Kd')
         return SetParametersResult(successful=True)
+
+    def set_parameters_service_callback(self, request, response):
+        """Serwis do ustawiania parametrów regulatora."""
+        try:
+            success_count = 0
+            total_params = len(request.parameters)
+            
+            for param in request.parameters:
+                param_name = param.name
+                param_value = param.value.double_value
+                
+                if param_name == 'kp':
+                    if self.update_parameter_and_variable('kp', param_value, 'Kp'):
+                        success_count += 1
+                elif param_name == 'ki':
+                    if self.update_parameter_and_variable('ki', param_value, 'Ki'):
+                        success_count += 1
+                elif param_name == 'kd':
+                    if self.update_parameter_and_variable('kd', param_value, 'Kd'):
+                        success_count += 1
+                else:
+                    self.get_logger().warn(f"Nieznany parametr: {param_name}")
+            
+            # Przygotuj odpowiedź
+            response.results = []
+            for param in request.parameters:
+                result = SetParametersResult()
+                result.successful = param.name in ['kp', 'ki', 'kd'] and success_count > 0
+                response.results.append(result)
+            
+            if success_count == total_params:
+                self.get_logger().info(f"Wszystkie parametry zaktualizowane pomyślnie: kp={self.Kp}, ki={self.Ki}, kd={self.Kd}")
+            else:
+                self.get_logger().warn(f"Zaktualizowano {success_count}/{total_params} parametrów")
+                
+            return response
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd w serwisie ustawiania parametrów: {e}")
+            response.results = []
+            for param in request.parameters:
+                result = SetParametersResult()
+                result.successful = False
+                response.results.append(result)
+            return response
 
     def set_enabled_callback(self, request, response):
         self.autopilot_enabled = request.data

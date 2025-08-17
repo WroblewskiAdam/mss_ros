@@ -556,12 +556,34 @@ button:disabled {
 }
 
 .settings-group input[type="range"]::-moz-range-thumb {
+    appearance: none;
     width: 20px;
     height: 20px;
     border-radius: 50%;
     background: var(--primary-color);
     cursor: pointer;
     border: none;
+}
+
+.settings-info {
+    background: rgba(52, 152, 219, 0.1);
+    border: 1px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    font-size: 0.9em;
+}
+
+.settings-info p {
+    margin: 5px 0;
+}
+
+.settings-info code {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
 }
 
 /* Responsywność */

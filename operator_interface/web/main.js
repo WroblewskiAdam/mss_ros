@@ -210,12 +210,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Logika strojenia PID ---
     const kpSlider = document.getElementById('kp-slider');
     const kiSlider = document.getElementById('ki-slider');
+    const kdSlider = document.getElementById('kd-slider');  // Dodany slider Kd
     const kpValueSpan = document.getElementById('kp-value');
     const kiValueSpan = document.getElementById('ki-value');
+    const kdValueSpan = document.getElementById('kd-value');  // Dodany span Kd
 
     kpSlider.oninput = () => kpValueSpan.textContent = parseFloat(kpSlider.value).toFixed(1);
     kiSlider.oninput = () => kiValueSpan.textContent = parseFloat(kiSlider.value).toFixed(1);
+    kdSlider.oninput = () => kdValueSpan.textContent = parseFloat(kdSlider.value).toFixed(1);
     
+    // Serwis do ustawiania parametrów
     const setParamsClient = new ROSLIB.Service({
         ros: ros,
         name: '/speed_controller_node/set_parameters',
@@ -225,13 +229,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('apply-pid-btn').onclick = () => {
         const params = [
             { name: 'kp', value: { type: 2, double_value: parseFloat(kpSlider.value) } },
-            { name: 'ki', value: { type: 2, double_value: parseFloat(kiSlider.value) } }
+            { name: 'ki', value: { type: 2, double_value: parseFloat(kiSlider.value) } },
+            { name: 'kd', value: { type: 2, double_value: parseFloat(kdSlider.value) } }
         ];
         const request = new ROSLIB.ServiceRequest({ parameters: params });
         setParamsClient.callService(request, (result) => {
             if (result.results.every(r => r.successful)) {
                 showNotification('Parametry zaktualizowane!', 'success');
-                modal.style.display = 'none';
+                // Automatyczne zamknięcie okienka popup
+                if (modal) {
+                    modal.style.display = 'none';
+                }
             } else {
                 showNotification('Błąd podczas aktualizacji parametrów.', 'error');
             }
