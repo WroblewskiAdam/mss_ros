@@ -8,10 +8,10 @@ import psutil
 import time
 
 # --- Konfiguracja pinów GPIO ---
-PIN_CLUTCH = 26
+PIN_CLUTCH = 5
 PIN_GEAR_1 = 19
 PIN_GEAR_2 = 13
-PIN_GEAR_3 = 5
+PIN_GEAR_3 = 26
 PIN_GEAR_4 = 6
 
 class GearReaderNode(Node):
