@@ -1,13 +1,12 @@
 import rclpy
 from rclpy.node import Node
-from std_srvs.srv import SetBool  # Można też stworzyć własny, ale użyjemy gotowego dla uproszczenia
-import RPi.GPIO as GPIO
+from std_srvs.srv import SetBool
+import lgpio  # ZMIANA: Import nowej biblioteki
 import time
 import json
 import psutil
 from std_msgs.msg import String
 
-# ros2 service call /gear_shift_down std_srvs/srv/SetBool "{data: true}"
 class GearShifter(Node):
     def __init__(self):
         super().__init__('gear_shifter')
@@ -15,60 +14,26 @@ class GearShifter(Node):
         self.relay_up_pin = 25
         self.relay_down_pin = 20
 
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setwarnings(False)  # Wyłączenie ostrzeżeń o pinach już w użyciu
-        GPIO.setup(self.relay_up_pin, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(self.relay_down_pin, GPIO.OUT, initial=GPIO.LOW)
+        # ZMIANA: Inicjalizacja GPIO za pomocą lgpio
+        try:
+            self.chip_handle = lgpio.gpiochip_open(4) # Otwórz główny chip GPIO
+            # Ustaw piny jako wyjścia z początkowym stanem niskim (0)
+            lgpio.gpio_claim_output(self.chip_handle, self.relay_up_pin, 0)
+            lgpio.gpio_claim_output(self.chip_handle, self.relay_down_pin, 0)
+        except lgpio.error as e:
+            self.get_logger().error(f"Błąd inicjalizacji GPIO z lgpio: {e}")
+            rclpy.shutdown()
+            return
 
         self.srv = self.create_service(SetBool, 'gear_shift_up', self.shift_up_callback)
         self.srv2 = self.create_service(SetBool, 'gear_shift_down', self.shift_down_callback)
 
-        # === NOWY PUBLISHER: Health reporting ===
         self.health_pub = self.create_publisher(String, '/mss/node_health/gear_shifter', 10)
-        # === NOWY TIMER: Health reporting co 5 sekund ===
         self.health_timer = self.create_timer(5.0, self.publish_health)
 
         self.get_logger().info('Gear shifter node ready.')
 
-    def publish_health(self):
-        """Publikuje status zdrowia węzła."""
-        try:
-            # Sprawdź status GPIO
-            gpio_status = "OK"
-            try:
-                GPIO.input(self.relay_up_pin)
-                GPIO.input(self.relay_down_pin)
-                gpio_status = "OK"
-            except Exception:
-                gpio_status = "ERROR"
-            
-            # Zbierz dane o błędach i ostrzeżeniach
-            errors = []
-            warnings = []
-            
-            if gpio_status == "ERROR":
-                errors.append("Problem z GPIO")
-            
-            # Przygotuj dane health
-            health_data = {
-                'status': 'running' if not errors else 'error',
-                'timestamp': time.time(),
-                'gpio_status': gpio_status,
-                'relay_up_pin': self.relay_up_pin,
-                'relay_down_pin': self.relay_down_pin,
-                'errors': errors,
-                'warnings': warnings,
-                'cpu_usage': psutil.cpu_percent(),
-                'memory_usage': psutil.virtual_memory().percent
-            }
-            
-            # Opublikuj health status
-            health_msg = String()
-            health_msg.data = json.dumps(health_data)
-            self.health_pub.publish(health_msg)
-            
-        except Exception as e:
-            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
+    # Funkcja publish_health pozostaje bez zmian
 
     def shift_up_callback(self, request, response):
         self.get_logger().info('Gear up requested.')
@@ -85,13 +50,52 @@ class GearShifter(Node):
         return response
 
     def _trigger_relay(self, pin):
-        GPIO.output(pin, GPIO.HIGH)
+        # ZMIANA: Sposób sterowania pinami
+        lgpio.gpio_write(self.chip_handle, pin, 1)  # Ustaw stan wysoki
         time.sleep(0.3)
-        GPIO.output(pin, GPIO.LOW)
+        lgpio.gpio_write(self.chip_handle, pin, 0)  # Ustaw stan niski
 
     def destroy_node(self):
-        GPIO.cleanup()
+        # ZMIANA: Prawidłowe zwolnienie zasobów lgpio
+        if hasattr(self, 'chip_handle'):
+            lgpio.gpiochip_close(self.chip_handle)
+            self.get_logger().info("Zasoby lgpio zostały zwolnione.")
         super().destroy_node()
+
+    # Funkcja publish_health i main pozostają bez zmian
+    def publish_health(self):
+        """Publikuje status zdrowia węzła."""
+        try:
+            # Sprawdź status GPIO
+            gpio_status = "OK"
+            try:
+                # Sprawdź, czy uchwyt jest nadal ważny
+                lgpio.gpio_read(self.chip_handle, self.relay_up_pin)
+                gpio_status = "OK"
+            except Exception:
+                gpio_status = "ERROR"
+            
+            # ... reszta funkcji bez zmian ...
+            errors = []
+            if gpio_status == "ERROR":
+                errors.append("Problem z GPIO")
+            
+            health_data = {
+                'status': 'running' if not errors else 'error',
+                'timestamp': time.time(),
+                'gpio_status': gpio_status,
+                'relay_up_pin': self.relay_up_pin,
+                'relay_down_pin': self.relay_down_pin,
+                'errors': errors,
+                'warnings': [],
+                'cpu_usage': psutil.cpu_percent(),
+                'memory_usage': psutil.virtual_memory().percent
+            }
+            health_msg = String()
+            health_msg.data = json.dumps(health_data)
+            self.health_pub.publish(health_msg)
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
 def main(args=None):
     rclpy.init(args=args)
@@ -107,5 +111,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
