@@ -1,0 +1,212 @@
+[INFO] [launch]: All log files can be found below /home/pi/.ros/log/2025-08-20-18-53-00-558984-ares-13535
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [rosbridge_websocket-1]: process started with pid [13542]
+[INFO] [rosapi_node-2]: process started with pid [13543]
+[rosbridge_websocket-1] [INFO] [1755708781.617826437] [rosbridge_websocket]: Rosbridge WebSocket server started on port 9090
+[rosbridge_websocket-1] 400 GET / (192.168.1.30) 0.52ms
+[rosbridge_websocket-1] 404 GET /favicon.ico (192.168.1.30) 0.54ms
+[rosbridge_websocket-1] [INFO] [1755708816.030703637] [rosbridge_websocket]: Calling services in new thread
+[rosbridge_websocket-1] [INFO] [1755708816.031668323] [rosbridge_websocket]: Sending action goals in new thread
+[rosbridge_websocket-1] [INFO] [1755708816.033279195] [rosbridge_websocket]: Client connected. 1 clients total.
+[rosbridge_websocket-1] [INFO] [1755708816.053005639] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /speed_controller/state
+[rosbridge_websocket-1] [INFO] [1755708816.056352123] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /diagnostics
+[rosbridge_websocket-1] [ERROR] [1755708816.060657979] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] [id: call_service:/speed_controller/set_enabled:3] call_service InvalidServiceException: Service /speed_controller/set_enabled does not exist
+[rosbridge_websocket-1] [INFO] [1755708816.061002960] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/system_status
+[rosbridge_websocket-1] [INFO] [1755708816.063290055] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/health_alerts
+[rosbridge_websocket-1] [INFO] [1755708816.065449539] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/system_monitor
+[rosbridge_websocket-1] [INFO] [1755708816.067556633] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/gps_rtk_node
+[rosbridge_websocket-1] [INFO] [1755708816.070210191] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/bt_receiver_node
+[rosbridge_websocket-1] [INFO] [1755708816.072779675] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/gear_reader_node
+[rosbridge_websocket-1] [INFO] [1755708816.074901417] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/servo_controller
+[rosbridge_websocket-1] [INFO] [1755708816.077015567] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/gear_shifter
+[rosbridge_websocket-1] [INFO] [1755708816.079342162] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/speed_filter_node
+[rosbridge_websocket-1] [INFO] [1755708816.081532368] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/speed_controller_node
+[rosbridge_websocket-1] [INFO] [1755708816.084443037] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/relative_computer_node
+[rosbridge_websocket-1] [INFO] [1755708816.086670742] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/gear_manager_node
+[rosbridge_websocket-1] [INFO] [1755708816.088937300] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/diagnostics_node
+[rosbridge_websocket-1] [INFO] [1755708816.091137469] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/system_monitor
+[rosbridge_websocket-1] [INFO] [1755708816.094320712] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] Subscribed to /mss/node_health/mss_health_monitor_node
+[rosbridge_websocket-1] [ERROR] [1755708820.711935368] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] [id: call_service:/servo/set_manual_mode:19] call_service InvalidServiceException: Service /servo/set_manual_mode does not exist
+[rosbridge_websocket-1] [ERROR] [1755708821.309192955] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] [id: call_service:/servo/set_manual_mode:20] call_service InvalidServiceException: Service /servo/set_manual_mode does not exist
+[rosbridge_websocket-1] [ERROR] [1755708821.483018129] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] [id: call_service:/servo/set_manual_mode:21] call_service InvalidServiceException: Service /servo/set_manual_mode does not exist
+[rosbridge_websocket-1] [ERROR] [1755708821.687898478] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] [id: call_service:/servo/set_manual_mode:22] call_service InvalidServiceException: Service /servo/set_manual_mode does not exist
+[rosbridge_websocket-1] [ERROR] [1755708822.388035196] [rosbridge_websocket]: [Client 79abc156-4c8e-4eb7-ba4a-e4599f658e7d] [id: call_service:/servo/set_manual_mode:23] call_service InvalidServiceException: Service /servo/set_manual_mode does not exist
+[rosbridge_websocket-1] [INFO] [1755713799.936009506] [rosbridge_websocket]: Calling services in new thread
+[rosbridge_websocket-1] [INFO] [1755713799.937351851] [rosbridge_websocket]: Sending action goals in new thread
+[rosbridge_websocket-1] [INFO] [1755713799.938982956] [rosbridge_websocket]: Client connected. 2 clients total.
+[rosbridge_websocket-1] [INFO] [1755713800.947077387] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /speed_controller/state
+[rosbridge_websocket-1] [INFO] [1755713800.953936146] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /diagnostics
+[rosbridge_websocket-1] [INFO] [1755713800.974073662] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/system_status
+[rosbridge_websocket-1] [INFO] [1755713800.981808743] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/health_alerts
+[rosbridge_websocket-1] [INFO] [1755713800.993626524] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/system_monitor
+[rosbridge_websocket-1] [INFO] [1755713800.998956160] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/gps_rtk_node
+[rosbridge_websocket-1] [INFO] [1755713801.009965712] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/bt_receiver_node
+[rosbridge_websocket-1] [INFO] [1755713801.015117457] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/gear_reader_node
+[rosbridge_websocket-1] [INFO] [1755713801.023245356] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/servo_controller
+[rosbridge_websocket-1] [INFO] [1755713801.029581445] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/gear_shifter
+[rosbridge_websocket-1] [INFO] [1755713801.037343359] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/speed_filter_node
+[rosbridge_websocket-1] [INFO] [1755713801.041477078] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/speed_controller_node
+[rosbridge_websocket-1] [INFO] [1755713801.048948842] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/relative_computer_node
+[rosbridge_websocket-1] [INFO] [1755713801.056743331] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/gear_manager_node
+[rosbridge_websocket-1] [INFO] [1755713801.063320644] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/diagnostics_node
+[rosbridge_websocket-1] [INFO] [1755713801.065481402] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/system_monitor
+[rosbridge_websocket-1] [INFO] [1755713801.071385246] [rosbridge_websocket]: [Client 41d7f736-7651-4c01-a8d1-d0871c2d619b] Subscribed to /mss/node_health/mss_health_monitor_node
+[rosbridge_websocket-1] [WARN] [1755714693.502444910] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [INFO] [1755714693.503379693] [rosbridge_websocket]: Client disconnected. 1 clients total.
+[rosbridge_websocket-1] [WARN] [1755714696.010799774] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714697.010821435] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714698.011140949] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714699.011303349] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714700.011450434] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714701.011526685] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714702.011556786] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714703.011601165] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714704.011930174] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714705.012292720] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714706.012489060] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714707.012758881] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714708.012925923] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714709.013020112] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714710.013331043] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714711.013528231] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714712.013753234] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714713.014111125] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714714.014163273] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714715.014489274] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714716.014592013] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714717.014927365] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714718.015001195] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714719.015271322] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714720.015320855] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714721.015640055] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714722.015765420] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714723.016108396] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714724.016128352] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714725.016537253] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714726.016825672] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714727.017111608] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714728.017436581] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714729.017480940] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714730.017690503] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714731.018050863] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714732.018276981] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714733.018572672] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714734.018981030] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714735.019231108] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714736.019559279] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714737.019869134] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714738.019935024] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714739.020253582] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714740.020646361] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714741.020722527] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714742.020737043] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714743.020746652] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714744.021021465] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714745.021139257] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714746.021175994] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714747.021219359] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714748.021624336] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714749.021896683] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714750.022145288] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714751.022435763] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714752.022565625] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714753.022773764] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714754.023084219] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714755.023141800] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714756.023551069] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714757.023590501] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714758.023767730] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714759.023953736] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714760.024072055] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714761.024327004] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714762.024362452] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714763.024547362] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714764.024964051] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714765.025208961] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714766.025602333] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714767.025823408] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714768.026214057] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714769.026584020] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714770.026772852] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714771.026962350] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714772.027167402] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714773.027210731] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714774.027274152] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714775.027412665] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714776.027760142] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714777.028092581] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714778.028298908] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714779.028481567] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714780.028534132] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714781.028863291] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714782.029032818] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714783.029190197] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714784.029444094] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714785.029518267] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714786.029570457] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714787.029710741] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714788.029865431] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714789.030271363] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714790.030371144] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714791.030678537] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714792.030830039] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714793.031233301] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714794.031384562] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714795.031701563] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714796.031995545] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714797.032042636] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714798.032103912] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714799.032381355] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714800.032658539] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714801.032940777] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714802.033307145] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714803.033476677] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714804.033777376] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714805.034121353] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714806.034493885] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714807.034547248] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714808.034577906] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714809.034876788] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714810.035093705] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714811.035451252] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714812.035857262] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714813.036062474] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714814.036305963] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714815.036417951] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714816.036567549] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714817.036868259] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714818.037076968] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714819.037273028] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714820.037410939] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714821.037806740] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714822.037945538] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714823.038308967] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714824.038693469] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714825.038807692] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714826.038980025] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714827.039296081] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714828.039588858] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714829.039863580] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714830.040156911] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714831.040216167] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714832.040563109] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714833.040573252] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714834.040894341] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714835.041088521] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714836.041216644] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714837.041303433] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714838.041572371] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714839.041745790] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714840.042133079] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714841.042507201] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714842.042677747] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714843.043064424] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714844.043279858] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714845.043686200] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714846.043742688] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714847.044016046] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714848.044277349] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714849.044474725] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714850.044819360] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714851.044881104] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket
+[rosbridge_websocket-1] [WARN] [1755714852.044885902] [rosbridge_websocket]: WebSocketClosedError: Tried to write to a closed websocket

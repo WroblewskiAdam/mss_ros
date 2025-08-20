@@ -1,91 +1,213 @@
 #!/bin/bash
 
-# Skrypt do uruchamiania interfejsu webowego MSS
-# Autor: Adam Wróblewski
-# Data: $(date)
+# MSS Web Interface Startup Script
+# Automatyczne uruchamianie web interface z ROS Bridge
+# Ctrl+C zatrzymuje wszystko
 
-echo "🚜 Uruchamianie interfejsu webowego MSS..."
-echo "=========================================="
+echo "=== MSS Web Interface Startup ==="
+echo "Data: $(date)"
+echo "================================"
 
-# Sprawdź czy jesteśmy w odpowiednim katalogu
+# Sprawdzanie czy jesteśmy w odpowiednim katalogu
 if [ ! -f "index.html" ]; then
-    echo "❌ Błąd: Uruchom skrypt z katalogu web/"
-    echo "   cd ~/mss_ros/install/operator_interface/share/operator_interface/web/"
+    echo "BŁĄD: Nie jestem w katalogu web!"
+    echo "Przejdź do: cd operator_interface/web"
     exit 1
 fi
 
-# Sprawdź czy rosbridge_server jest uruchomiony
-echo "🔍 Sprawdzanie statusu rosbridge_server..."
-if ! pgrep -f "rosbridge_server" > /dev/null; then
-    echo "⚠️  rosbridge_server nie jest uruchomiony!"
-    echo "   Uruchom: ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
-    echo ""
-    echo "Czy chcesz uruchomić rosbridge_server teraz? (t/n)"
-    read -r response
-    if [[ "$response" =~ ^[Tt]$ ]]; then
-        echo "🚀 Uruchamianie rosbridge_server..."
-        ros2 launch rosbridge_server rosbridge_websocket_launch.xml &
-        ROSBRIDGE_PID=$!
-        echo "   rosbridge_server uruchomiony (PID: $ROSBRIDGE_PID)"
-        sleep 3
-    else
-        echo "❌ Interfejs nie może działać bez rosbridge_server"
-        exit 1
-    fi
-else
-    echo "✅ rosbridge_server jest uruchomiony"
+# Sprawdzanie dostępności ROS2
+if ! command -v ros2 &> /dev/null; then
+    echo "BŁĄD: ROS2 nie jest zainstalowany lub nie jest w PATH!"
+    echo "Uruchom: source /opt/ros/humble/setup.bash"
+    exit 1
 fi
 
-# Sprawdź dostępność portu 8000
-echo "🔍 Sprawdzanie dostępności portu 8000..."
-if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null ; then
-    echo "⚠️  Port 8000 jest już zajęty!"
-    echo "   Zatrzymuję istniejący serwer..."
-    pkill -f "python3 -m http.server 8000"
+# Sprawdzanie dostępności rosbridge_server
+if ! ros2 pkg list | grep -q "rosbridge_server"; then
+    echo "BŁĄD: rosbridge_server nie jest zainstalowany!"
+    echo "Zainstaluj: sudo apt install ros-humble-rosbridge-server"
+    exit 1
+fi
+
+# === AUTOMATYCZNE CZYSZCZENIE STARYCH SESJI ===
+
+echo "🔍 Sprawdzanie starych sesji ROS Bridge..."
+
+# Znajdź i zabij procesy rosbridge_server
+ROSBRIDGE_PIDS=$(pgrep -f "rosbridge_server")
+if [ ! -z "$ROSBRIDGE_PIDS" ]; then
+    echo "⚠️  Znaleziono stare sesje ROS Bridge (PIDs: $ROSBRIDGE_PIDS)"
+    echo "🗑️  Zabijam stare sesje..."
+    
+    for pid in $ROSBRIDGE_PIDS; do
+        echo "   Zabijam proces $pid..."
+        kill -TERM $pid 2>/dev/null
+        sleep 1
+        
+        # Jeśli proces nadal żyje, użyj force kill
+        if kill -0 $pid 2>/dev/null; then
+            echo "   Force kill procesu $pid..."
+            kill -KILL $pid 2>/dev/null
+        fi
+    done
+    
+    # Poczekaj chwilę na zamknięcie
     sleep 2
+    
+    # Sprawdź czy port 9090 jest wolny
+    if lsof -i :9090 >/dev/null 2>&1; then
+        echo "⚠️  Port 9090 nadal zajęty, próbuję force kill..."
+        sudo lsof -ti :9090 | xargs -r sudo kill -KILL
+        sleep 1
+    fi
+    
+    echo "✅ Stare sesje ROS Bridge zostały zabite"
+else
+    echo "✅ Brak starych sesji ROS Bridge"
 fi
 
-# Uruchom serwer HTTP
-echo "🌐 Uruchamianie serwera HTTP na porcie 8000..."
-python3 -m http.server 8000 &
-HTTP_PID=$!
+# Sprawdź czy port 9090 jest wolny
+if lsof -i :9090 >/dev/null 2>&1; then
+    echo "❌ Port 9090 nadal zajęty! Sprawdź co go blokuje:"
+    lsof -i :9090
+    exit 1
+fi
+
+echo "✅ Port 9090 jest wolny"
+
+# === URUCHAMIANIE ROS BRIDGE ===
+
+echo "🚀 Uruchamianie ROS Bridge Server..."
+
+# Uruchom rosbridge_server w tle
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml > rosbridge.log 2>&1 &
+ROSBRIDGE_PID=$!
+
+# Poczekaj na uruchomienie
+echo "⏳ Oczekiwanie na uruchomienie ROS Bridge..."
+sleep 5
+
+# Sprawdź czy ROS Bridge działa
+if ! kill -0 $ROSBRIDGE_PID 2>/dev/null; then
+    echo "❌ ROS Bridge nie uruchomił się!"
+    echo "Sprawdź logi: cat rosbridge.log"
+    exit 1
+fi
+
+# Sprawdź czy port 9090 jest otwarty
+if ! lsof -i :9090 >/dev/null 2>&1; then
+    echo "❌ Port 9090 nie został otwarty!"
+    echo "Sprawdź logi: cat rosbridge.log"
+    kill $ROSBRIDGE_PID 2>/dev/null
+    exit 1
+fi
+
+echo "✅ ROS Bridge uruchomiony (PID: $ROSBRIDGE_PID, Port: 9090)"
+
+# === URUCHAMIANIE WEB SERVERA ===
+
+echo "🌐 Uruchamianie web servera..."
+
+# Sprawdź czy masz Python3
+if command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &> /dev/null; then
+    PYTHON_CMD="python"
+else
+    echo "❌ Nie znaleziono Pythona!"
+    exit 1
+fi
+
+# Uruchom web server w tle
+$PYTHON_CMD -m http.server 8080 > webserver.log 2>&1 &
+WEBSERVER_PID=$!
+
+# Poczekaj na uruchomienie
+sleep 2
+
+# Sprawdź czy web server działa
+if ! kill -0 $WEBSERVER_PID 2>/dev/null; then
+    echo "❌ Web server nie uruchomił się!"
+    echo "Sprawdź logi: cat webserver.log"
+    kill $ROSBRIDGE_PID 2>/dev/null
+    exit 1
+fi
+
+# Sprawdź czy port 8080 jest otwarty
+if ! lsof -i :8080 >/dev/null 2>&1; then
+    echo "❌ Port 8080 nie został otwarty!"
+    echo "Sprawdź logi: cat webserver.log"
+    kill $WEBSERVER_PID 2>/dev/null
+    kill $ROSBRIDGE_PID 2>/dev/null
+    exit 1
+fi
+
+echo "✅ Web server uruchomiony (PID: $WEBSERVER_PID, Port: 8080)"
+
+# === INFORMACJE KOŃCOWE ===
 
 echo ""
-echo "✅ Interfejs webowy uruchomiony!"
-echo "=========================================="
-echo "📱 Otwórz przeglądarkę i przejdź do:"
-echo "   http://$(hostname -I | awk '{print $1}'):8000"
-echo "   lub"
-echo "   http://localhost:8000"
+echo "🎉 MSS Web Interface uruchomiony pomyślnie!"
 echo ""
-echo "🔧 Aby zatrzymać interfejs:"
-echo "   pkill -f 'python3 -m http.server 8000'"
+echo "📱 Web Interface: http://localhost:8080"
+echo "🔌 ROS Bridge: ws://localhost:9090"
 echo ""
-echo "📊 Aby zatrzymać rosbridge_server:"
-echo "   pkill -f 'rosbridge_server'"
+echo "📊 Status procesów:"
+echo "   ROS Bridge: PID $ROSBRIDGE_PID (Port 9090)"
+echo "   Web Server: PID $WEBSERVER_PID (Port 8080)"
 echo ""
-echo "🔄 Aby uruchomić ponownie:"
-echo "   ./start_interface.sh"
+echo "📝 Logi:"
+echo "   ROS Bridge: cat rosbridge.log"
+echo "   Web Server: cat webserver.log"
+echo ""
+echo "💡 Zatrzymaj: Ctrl+C"
 echo ""
 
-# Funkcja czyszczenia przy wyjściu
+# Zapisz PID-y do pliku dla łatwego zatrzymania
+echo "$ROSBRIDGE_PID $WEBSERVER_PID" > .mss_pids
+echo "PID-y zapisane w pliku .mss_pids"
+
+# === FUNKCJA CLEANUP ===
+
 cleanup() {
     echo ""
-    echo "🧹 Czyszczenie..."
-    if [ ! -z "$HTTP_PID" ]; then
-        kill $HTTP_PID 2>/dev/null
-        echo "   Serwer HTTP zatrzymany"
-    fi
+    echo "🛑 Zatrzymywanie MSS Web Interface..."
+    
     if [ ! -z "$ROSBRIDGE_PID" ]; then
         kill $ROSBRIDGE_PID 2>/dev/null
-        echo "   rosbridge_server zatrzymany"
+        echo "   ROS Bridge zatrzymany"
     fi
+    
+    if [ ! -z "$WEBSERVER_PID" ]; then
+        kill $WEBSERVER_PID 2>/dev/null
+        echo "   Web server zatrzymany"
+    fi
+    
+    # Usuń plik PID-ów
+    rm -f .mss_pids
+    
+    # Sprawdź czy porty są wolne
+    if lsof -i :9090 >/dev/null 2>&1; then
+        echo "⚠️  Port 9090 nadal zajęty, force kill..."
+        sudo lsof -ti :9090 | xargs -r sudo kill -KILL
+    fi
+    
+    if lsof -i :8080 >/dev/null 2>&1; then
+        echo "⚠️  Port 8080 nadal zajęty, force kill..."
+        sudo lsof -ti :8080 | xargs -r sudo kill -KILL
+    fi
+    
     echo "✅ Wszystko zatrzymane"
     exit 0
 }
 
-# Przechwyć sygnały wyjścia
+# Przechwyć sygnały i wykonaj cleanup
 trap cleanup SIGINT SIGTERM
 
-echo "⏳ Naciśnij Ctrl+C aby zatrzymać..."
+# === GŁÓWNA PĘTLA ===
+
+echo "💡 Naciśnij Ctrl+C aby zatrzymać"
+echo ""
+
+# Czekaj na sygnał zatrzymania
 wait
