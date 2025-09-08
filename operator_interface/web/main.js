@@ -242,12 +242,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setParamsClient.callService(request, (result) => {
             if (result.results.every(r => r.successful)) {
                 showNotification('Parametry zaktualizowane!', 'success');
-                // Automatyczne zamknięcie okienka popup
-                if (modal) {
-                    modal.style.display = 'none';
-                }
             } else {
                 showNotification('Błąd podczas aktualizacji parametrów.', 'error');
+            }
+            // Automatyczne zamknięcie okienka popup - zawsze
+            if (modal) {
+                modal.style.display = 'none';
             }
         });
     };
