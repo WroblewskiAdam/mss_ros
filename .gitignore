@@ -19,3 +19,9 @@ dist/
 
 # Ignoruj pliki bazy danych kompilacji
 compile_commands.json
+*.log
+
+# Pliki logów specyficzne dla MSS
+webserver.log
+rosbridge.log
+.mss_pids

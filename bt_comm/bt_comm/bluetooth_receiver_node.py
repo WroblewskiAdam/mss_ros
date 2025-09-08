@@ -61,7 +61,7 @@ class BluetoothReceiverNode(Node):
         # Loguj tylko jeśli minęło 2 sekundy od ostatniego logu
         if current_time - self.last_connection_log_time >= 2.0:
             if self.connection_status == "WAITING":
-                self.get_logger().info("Oczekiwanie na połączenie od ESP32...")
+                self.get_logger().info("Oczekiwanie na połączenie...")
             elif self.connection_status == "DISCONNECTED":
                 self.get_logger().info("Status: Brak połączenia Bluetooth")
             elif self.connection_status == "CONNECTED":

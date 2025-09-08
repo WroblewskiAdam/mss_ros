@@ -106,21 +106,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     stateListener.subscribe((message) => {
-        // Aktualizuj wykres TYLKO gdy regulator prędkości jest włączony
-        if (isSpeedControllerEnabled) {
-            const now = new Date(message.header.stamp.sec * 1000 + message.header.stamp.nanosec / 1000000);
-            
-            controllerChart.data.labels.push(now);
-            controllerChart.data.datasets[0].data.push(message.setpoint_speed);
-            controllerChart.data.datasets[1].data.push(message.current_speed);
-            controllerChart.data.datasets[2].data.push(message.control_output);
+        const now = new Date(message.header.stamp.sec * 1000 + message.header.stamp.nanosec / 1000000);
+        
+        controllerChart.data.labels.push(now);
+        controllerChart.data.datasets[0].data.push(message.setpoint_speed);
+        controllerChart.data.datasets[1].data.push(message.current_speed);
+        controllerChart.data.datasets[2].data.push(message.control_output);
 
-            if (controllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
-                controllerChart.data.labels.shift();
-                controllerChart.data.datasets.forEach(dataset => dataset.data.shift());
-            }
-            controllerChart.update('none');
+        if (controllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
+            controllerChart.data.labels.shift();
+            controllerChart.data.datasets.forEach(dataset => dataset.data.shift());
         }
+        controllerChart.update('none');
     });
 
     // --- Subskrypcja danych o niskiej częstotliwości (dla paneli) ---
@@ -149,6 +146,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ciągnik - wszystkie dostępne dane
         updateFloat('tractor_speed', message.tractor_gps_filtered.speed_mps, 4, 3.6);
         updateFloat('target_speed', message.target_speed.data, 4, 3.6);
+        
+        // Aktualizacja wyświetlacza prędkości w zakładce regulator
+        if (message.tractor_gps_filtered.speed_mps !== PLACEHOLDER_FLOAT) {
+            const speedKmh = (message.tractor_gps_filtered.speed_mps * 3.6).toFixed(3);
+            const currentSpeedElement = document.getElementById('tractor_speed');
+            if (currentSpeedElement) {
+                currentSpeedElement.textContent = `${speedKmh} km/h`;
+            }
+        }
         updateText('gear', message.tractor_gear.gear === 255 ? 'TIMEOUT' : message.tractor_gear.gear);
         updateText('clutch', clutchStatusMap[message.tractor_gear.clutch_state] || 'Nieznany');
         updateInt('servo_pos', message.servo_position.data);
