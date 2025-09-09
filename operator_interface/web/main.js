@@ -144,15 +144,15 @@ document.addEventListener('DOMContentLoaded', () => {
         updateText('chopper_rtk', rtkStatusMap[message.chopper_gps.rtk_status] || 'Nieznany');
         
         // Ciągnik - wszystkie dostępne dane
-        updateFloat('tractor_speed', message.tractor_gps_filtered.speed_mps, 4, 3.6);
+        updateFloat('tractor_speed_details', message.tractor_gps_filtered.speed_mps, 4, 3.6);
         updateFloat('target_speed', message.target_speed.data, 4, 3.6);
         
         // Aktualizacja wyświetlacza prędkości w zakładce regulator
         if (message.tractor_gps_filtered.speed_mps !== PLACEHOLDER_FLOAT) {
-            const speedKmh = (message.tractor_gps_filtered.speed_mps * 3.6).toFixed(3);
+            const speedMps = message.tractor_gps_filtered.speed_mps.toFixed(3);
             const currentSpeedElement = document.getElementById('tractor_speed');
             if (currentSpeedElement) {
-                currentSpeedElement.textContent = `${speedKmh} km/h`;
+                currentSpeedElement.textContent = `${speedMps} m/s`;
             }
         }
         updateText('gear', message.tractor_gear.gear === 255 ? 'TIMEOUT' : message.tractor_gear.gear);
