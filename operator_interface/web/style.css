@@ -239,9 +239,10 @@ button:disabled {
     font-size: 1.25rem;
 }
 
+
 #viz-container { 
     position: relative;
-    height: 400px;
+    height: 600px;
     background: var(--bg-tertiary);
     border-radius: var(--radius-md);
     border: 2px solid var(--border-color);
@@ -275,6 +276,48 @@ button:disabled {
 #tractor .vehicle-icon {
     transform-origin: center center;
     transition: transform 0.3s ease;
+}
+
+/* Style dla ikon SVG */
+.vehicle-svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    transform: rotate(90deg); /* Obrót o 90° w prawo */
+}
+
+/* Bazowe rozmiary ikon - będą skalowane przez JavaScript */
+#chopper .vehicle-icon {
+    width: 100px;  /* Bazowy rozmiar sieczkarni */
+    height: 100px;
+}
+
+#tractor .vehicle-icon {
+    width: 80px;   /* Bazowy rozmiar ciągnika */
+    height: 200px;
+}
+
+/* Punkty referencyjne */
+.reference-point {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 1px solid white;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.chopper-ref {
+    background: #ff6b6b; /* Czerwony dla sieczkarni */
+    border-color: #ff4757;
+}
+
+.tractor-ref {
+    background: #ff6b6b; /* Czerwony dla ciągnika */
+    border-color: #ff4757;
 }
 
 /* Style dla prostych prostokątów */
@@ -544,6 +587,7 @@ button:disabled {
     background: var(--bg-tertiary);
     outline: none;
     -webkit-appearance: none;
+    appearance: none;
 }
 
 .settings-group input[type="range"]::-webkit-slider-thumb {
@@ -557,6 +601,7 @@ button:disabled {
 }
 
 .settings-group input[type="range"]::-moz-range-thumb {
+    -moz-appearance: none;
     appearance: none;
     width: 20px;
     height: 20px;
@@ -599,6 +644,7 @@ button:disabled {
         min-width: auto;
     }
     
+    
     .tabs {
         justify-content: center;
     }
@@ -627,6 +673,10 @@ button:disabled {
     
     .chart-container {
         min-height: 300px;
+    }
+    
+    #viz-container {
+        height: 500px;
     }
     
     .modal-content {
@@ -660,7 +710,7 @@ button:disabled {
     }
     
     #viz-container {
-        height: 250px;
+        height: 400px;
     }
     
     .data-item, .detail-item {
@@ -748,7 +798,7 @@ button:disabled {
     }
     
     #viz-container {
-        height: 250px;
+        height: 400px;
     }
     
     /* Ikony na bardzo małych ekranach - proporcjonalnie mniejsze */

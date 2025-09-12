@@ -34,15 +34,23 @@
                 <div id="viz-container">
                     <!-- Sieczkarnia -->
                     <div id="chopper" class="vehicle-symbol" title="Sieczkarnia">
-                        <div class="vehicle-icon chopper-simple"></div>
+                        <div class="vehicle-icon">
+                            <img src="icons/chopper.svg" alt="Sieczkarnia" class="vehicle-svg" />
+                        </div>
                         <div class="speed-label" id="chopper-speed">0.0 km/h</div>
                     </div>
                     
                     <!-- Ciągnik z przyczepą -->
                     <div id="tractor" class="vehicle-symbol" title="Ciągnik">
-                        <div class="vehicle-icon tractor-simple"></div>
+                        <div class="vehicle-icon">
+                            <img src="icons/tractor_trailer.svg" alt="Ciągnik" class="vehicle-svg" />
+                        </div>
                         <div class="speed-label" id="tractor-speed">0.0 km/h</div>
                     </div>
+                    
+                    <!-- Punkty referencyjne -->
+                    <div id="chopper-ref-point" class="reference-point chopper-ref" title="Punkt referencyjny sieczkarni (rura)"></div>
+                    <div id="tractor-ref-point" class="reference-point tractor-ref" title="Punkt referencyjny ciągnika (środek przyczepy)"></div>
                 </div>
             </div>
             <div class="data-panel">

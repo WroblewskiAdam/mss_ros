@@ -10,6 +10,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAutopilotOn = false;           // Główny autopilot (regulator prędkości + pozycji)
     let isSpeedControllerEnabled = false; // Regulator prędkości
     let isPositionControllerEnabled = false; // Regulator pozycji (na razie nieistniejący)
+    
+    // --- Zmienne skalowania ikon - ZMIEŃ TUTAJ ROZMIARY ---
+    const CHOPPER_SCALE = 1.4;  // Skala sieczkarni (0.1 = 10%, 1.0 = 100%, 2.0 = 200%)
+    const TRACTOR_SCALE = 2.3;  // Skala ciągnika (0.1 = 10%, 1.0 = 100%, 2.0 = 200%)
+    const BASE_CHOPPER_SIZE = { width: 100, height: 100 }; // Bazowy rozmiar sieczkarni
+    const BASE_TRACTOR_SIZE = { width: 80, height: 200 };  // Bazowy rozmiar ciągnika
+    
+    // --- OFFSETY PUNKTÓW REFERENCYJNYCH - ZMIEŃ TUTAJ POZYCJE ---
+    const CHOPPER_OFFSET = { x: 3, y: 8 };    // Offset dla punktu 0,0 sieczkarni (rura)
+    const TRACTOR_OFFSET = { x: 3, y: -25 };    // Offset dla punktu 0,0 ciągnika (środek przyczepy)
+    
+    // --- PUNKTY REFERENCYJNE - WŁĄCZ/WYŁĄCZ ---
+    const SHOW_REFERENCE_POINTS = true;  // true = pokaż punkty, false = ukryj
 
     // --- Inicjalizacja ROS ---
     const ros = new ROSLIB.Ros({ url: ROS_BRIDGE_URL });
@@ -30,6 +43,47 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Pokaż pierwszą zakładkę na starcie
     document.querySelector('.tab-button').click();
+
+    // --- Inicjalizacja rozmiarów ikon i punktów referencyjnych ---
+    function initializeIconSizes() {
+        // Ustaw rozmiary sieczkarni
+        const chopperIcon = document.querySelector('#chopper .vehicle-icon');
+        if (chopperIcon) {
+            chopperIcon.style.width = `${BASE_CHOPPER_SIZE.width * CHOPPER_SCALE}px`;
+            chopperIcon.style.height = `${BASE_CHOPPER_SIZE.height * CHOPPER_SCALE}px`;
+        }
+        
+        // Ustaw rozmiary ciągnika
+        const tractorIcon = document.querySelector('#tractor .vehicle-icon');
+        if (tractorIcon) {
+            tractorIcon.style.width = `${BASE_TRACTOR_SIZE.width * TRACTOR_SCALE}px`;
+            tractorIcon.style.height = `${BASE_TRACTOR_SIZE.height * TRACTOR_SCALE}px`;
+        }
+        
+        // Inicjalizuj punkty referencyjne
+        initializeReferencePoints();
+        
+        console.log(`Rozmiary ikon zainicjalizowane - Sieczkarnia: ${CHOPPER_SCALE * 100}%, Ciągnik: ${TRACTOR_SCALE * 100}%`);
+    }
+    
+    // --- Inicjalizacja punktów referencyjnych ---
+    function initializeReferencePoints() {
+        const chopperRefPoint = document.getElementById('chopper-ref-point');
+        const tractorRefPoint = document.getElementById('tractor-ref-point');
+        
+        if (chopperRefPoint) {
+            chopperRefPoint.style.display = SHOW_REFERENCE_POINTS ? 'block' : 'none';
+        }
+        
+        if (tractorRefPoint) {
+            tractorRefPoint.style.display = SHOW_REFERENCE_POINTS ? 'block' : 'none';
+        }
+        
+        console.log(`Punkty referencyjne ${SHOW_REFERENCE_POINTS ? 'włączone' : 'wyłączone'}`);
+    }
+    
+    // Inicjalizacja rozmiarów na starcie
+    initializeIconSizes();
 
     // --- Inicjalizacja wykresu ---
     const ctx = document.getElementById('controller-chart').getContext('2d');
@@ -179,7 +233,32 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFloat('dist_lat', message.relative_position.distance_lateral, 2);
         updateFloat('dist_straight', message.relative_position.distance_straight, 2);
 
+        // Zapisz ostatnią wiadomość dla ponownego wywołania wizualizacji
+        window.lastDiagnosticMessage = message;
+
         // --- Aktualizacja wizualizacji 2D ---
+        updateVisualization(message);
+        
+        // --- Aktualizacja etykiet prędkości ---
+        if (message.tractor_gps_filtered.speed_mps !== PLACEHOLDER_FLOAT) {
+            const tractorSpeedEl = document.getElementById('tractor-speed');
+            if (tractorSpeedEl) {
+                const speedKmh = (message.tractor_gps_filtered.speed_mps * 3.6).toFixed(4);
+                tractorSpeedEl.textContent = `${speedKmh} km/h`;
+            }
+        }
+        
+        if (message.chopper_gps.speed_mps !== PLACEHOLDER_FLOAT) {
+            const chopperSpeedEl = document.getElementById('chopper-speed');
+            if (chopperSpeedEl) {
+                const speedKmh = (message.chopper_gps.speed_mps * 3.6).toFixed(4);
+                chopperSpeedEl.textContent = `${speedKmh} km/h`;
+            }
+        }
+    });
+
+    // Funkcja aktualizacji wizualizacji 2D
+    function updateVisualization(message) {
         if (message.relative_position.distance_longitudinal !== PLACEHOLDER_FLOAT) {
             const vizContainer = document.getElementById('viz-container');
             const tractorElement = document.getElementById('tractor');
@@ -216,16 +295,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             
-            // Pozycja sieczkarni w centrum z skalowaniem
-            const chopperWidth = 40 * vehicleScale;
-            const chopperHeight = 42 * vehicleScale;
-            chopperElement.style.left = `${containerCenterX - chopperWidth/2}px`;
-            chopperElement.style.top = `${containerCenterY - chopperHeight/2}px`;
+            // Pozycja sieczkarni w centrum z skalowaniem i offsetem
+            const chopperWidth = BASE_CHOPPER_SIZE.width * CHOPPER_SCALE * vehicleScale;
+            const chopperHeight = BASE_CHOPPER_SIZE.height * CHOPPER_SCALE * vehicleScale;
+            chopperElement.style.left = `${containerCenterX - chopperWidth/2 + CHOPPER_OFFSET.x}px`;
+            chopperElement.style.top = `${containerCenterY - chopperHeight/2 + CHOPPER_OFFSET.y}px`;
             
-            // Skalowanie prostokąta sieczkarni
+            // Skalowanie ikony sieczkarni - zachowuje rzeczywiste proporcje
             const chopperIcon = chopperElement.querySelector('.vehicle-icon');
             if (chopperIcon) {
                 chopperIcon.style.transform = `scale(${vehicleScale})`;
+            }
+            
+            // Pozycjonowanie punktu referencyjnego sieczkarni (punkt 0,0)
+            const chopperRefPoint = document.getElementById('chopper-ref-point');
+            if (chopperRefPoint && SHOW_REFERENCE_POINTS) {
+                chopperRefPoint.style.left = `${containerCenterX}px`;
+                chopperRefPoint.style.top = `${containerCenterY}px`;
             }
             
             // 2. Obliczenie heading względnego ciągnika względem sieczkarni
@@ -242,36 +328,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const tractorX = containerCenterX + (message.relative_position.distance_lateral * scale);
             const tractorY = containerCenterY - (message.relative_position.distance_longitudinal * scale);
             
-            // Pozycjonowanie ciągnika z skalowaniem
-            const tractorWidth = 30 * vehicleScale;
-            const tractorHeight = 130 * vehicleScale;
-            tractorElement.style.left = `${tractorX - tractorWidth/2}px`;
-            tractorElement.style.top = `${tractorY - tractorHeight/2}px`;
+            // Pozycjonowanie ciągnika z skalowaniem i offsetem
+            const tractorWidth = BASE_TRACTOR_SIZE.width * TRACTOR_SCALE * vehicleScale;
+            const tractorHeight = BASE_TRACTOR_SIZE.height * TRACTOR_SCALE * vehicleScale;
+            tractorElement.style.left = `${tractorX - tractorWidth/2 + TRACTOR_OFFSET.x}px`;
+            tractorElement.style.top = `${tractorY - tractorHeight/2 + TRACTOR_OFFSET.y}px`;
             
-            // 4. Obracanie i skalowanie ciągnika
+            // 4. Obracanie i skalowanie ciągnika - zachowuje rzeczywiste proporcje
             const tractorIcon = tractorElement.querySelector('.vehicle-icon');
             if (tractorIcon) {
                 tractorIcon.style.transform = `rotate(${relativeHeading}deg) scale(${vehicleScale})`;
             }
-        }
-        
-        // --- Aktualizacja etykiet prędkości ---
-        if (message.tractor_gps_filtered.speed_mps !== PLACEHOLDER_FLOAT) {
-            const tractorSpeedEl = document.getElementById('tractor-speed');
-            if (tractorSpeedEl) {
-                const speedKmh = (message.tractor_gps_filtered.speed_mps * 3.6).toFixed(4);
-                tractorSpeedEl.textContent = `${speedKmh} km/h`;
+            
+            // Pozycjonowanie punktu referencyjnego ciągnika (punkt 0,0)
+            const tractorRefPoint = document.getElementById('tractor-ref-point');
+            if (tractorRefPoint && SHOW_REFERENCE_POINTS) {
+                tractorRefPoint.style.left = `${tractorX}px`;
+                tractorRefPoint.style.top = `${tractorY}px`;
             }
         }
-        
-        if (message.chopper_gps.speed_mps !== PLACEHOLDER_FLOAT) {
-            const chopperSpeedEl = document.getElementById('chopper-speed');
-            if (chopperSpeedEl) {
-                const speedKmh = (message.chopper_gps.speed_mps * 3.6).toFixed(4);
-                chopperSpeedEl.textContent = `${speedKmh} km/h`;
-            }
-        }
-    });
+    }
 
     // --- Logika strojenia PID ---
     const kpSlider = document.getElementById('kp-slider');
