@@ -2,7 +2,8 @@ import rclpy
 from rclpy.node import Node
 from std_srvs.srv import SetBool
 from my_robot_interfaces.msg import Gear, StampedInt32
-from std_msgs.msg import Float64, String # <-- NOWY IMPORT
+from std_msgs.msg import Float64, String
+from my_robot_interfaces.msg import GpsRtk  # Import dla prędkości aktualnej
 import json
 import psutil
 import time
@@ -10,21 +11,36 @@ import time
 class GearManagerNode(Node):
     """
     Węzeł do automatycznego zarządzania zmianą półbiegów (powershift).
-    Decyzje o zmianie podejmowane są na podstawie prędkości zadanej
+    Decyzje o zmianie podejmowane są na podstawie PRĘDKOŚCI AKTUALNEJ z GPS
     i znanych charakterystyk prędkości dla każdego półbiegu.
+    
+    Progi prędkości definiowane są w km/h (jak na liczniku ciągnika):
+    - Bieg 1: do 10.4 km/h
+    - Bieg 2: do 13.0 km/h  
+    - Bieg 3: do 14.8 km/h
+    - Bieg 4: do 20.2 km/h
+    
+    Logika:
+    - UPSHIFT: gdy aktualna prędkość > 95% max prędkości biegu
+    - DOWNSHIFT: gdy aktualna prędkość < 85% max prędkości niższego biegu
+    
+    Automatycznie konwertuje km/h na m/s dla obliczeń wewnętrznych.
     """
     def __init__(self):
         super().__init__('gear_manager_node')
 
         # --- Parametry decyzyjne oparte na charakterystyce prędkości ---
-        self.declare_parameter('powershift_max_speeds', [2.9, 3.6, 4.1, 5.6])
+        # Progi prędkości w km/h (jak na liczniku ciągnika)
+        self.declare_parameter('powershift_max_speeds_kmh', [10.4, 13.0, 14.8, 20.2])  # km/h
         self.declare_parameter('upshift_threshold_percent', 0.95)
         self.declare_parameter('downshift_threshold_percent', 0.85)
         self.declare_parameter('shift_cooldown_sec', 4.0)
         self.declare_parameter('initial_powershift', 1)
         self.declare_parameter('max_powershift', 4)
 
-        self.powershift_max_speeds = self.get_parameter('powershift_max_speeds').get_parameter_value().double_array_value
+        # Konwersja km/h na m/s dla obliczeń wewnętrznych
+        powershift_max_speeds_kmh = self.get_parameter('powershift_max_speeds_kmh').get_parameter_value().double_array_value
+        self.powershift_max_speeds = [speed_kmh / 3.6 for speed_kmh in powershift_max_speeds_kmh]  # km/h -> m/s
         self.upshift_thresh_percent = self.get_parameter('upshift_threshold_percent').get_parameter_value().double_value
         self.downshift_thresh_percent = self.get_parameter('downshift_threshold_percent').get_parameter_value().double_value
         self.shift_cooldown = self.get_parameter('shift_cooldown_sec').get_parameter_value().double_value
@@ -32,15 +48,17 @@ class GearManagerNode(Node):
         self.max_powershift = self.get_parameter('max_powershift').get_parameter_value().integer_value
 
         # --- Zmienne stanu ---
-        self.target_speed = 0.0
+        self.current_speed = 0.0  # Prędkość aktualna z GPS (m/s)
         self.current_mechanical_gear = 0
         self.clutch_pressed = True
-        self.current_powershift = self.initial_powershift
+        self.current_powershift = 0  # ZMIANA: 0 = nieznany, będzie odczytane z /gears
         self.last_shift_time = self.get_clock().now()
+        self.is_enabled = True  # NOWY: Stan włączania/wyłączania gear managera
+        self.powershift_initialized = False  # NOWY: Flaga czy półbieg został odczytany
 
         # --- Subskrypcje ---
         self.create_subscription(Gear, '/gears', self.gear_callback, 10)
-        self.create_subscription(Float64, '/target_speed', self.target_speed_callback, 10) # <-- NOWA SUBSKRYPCJA
+        self.create_subscription(GpsRtk, '/gps_rtk_data_filtered', self.current_speed_callback, 10)  # Prędkość aktualna z GPS
 
         # --- Klienci usług do zmiany biegów ---
         self.shift_up_client = self.create_client(SetBool, 'gear_shift_up')
@@ -49,6 +67,9 @@ class GearManagerNode(Node):
             self.get_logger().info('Oczekiwanie na serwis /gear_shift_up...')
         while not self.shift_down_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Oczekiwanie na serwis /gear_shift_down...')
+
+        # --- NOWY: Serwis do włączania/wyłączania gear managera ---
+        self.set_enabled_service = self.create_service(SetBool, 'gear_manager/set_enabled', self.set_enabled_callback)
 
         # --- Główna pętla decyzyjna ---
         self.decision_timer = self.create_timer(0.5, self.decision_loop) # 2 Hz
@@ -59,19 +80,45 @@ class GearManagerNode(Node):
         self.health_timer = self.create_timer(5.0, self.publish_health)
 
         self.get_logger().info("Menedżer półbiegów uruchomiony (logika oparta na profilu prędkości).")
-        self.get_logger().info(f"Maksymalne prędkości półbiegów: {self.powershift_max_speeds}")
+        self.get_logger().info(f"Maksymalne prędkości półbiegów: {powershift_max_speeds_kmh} km/h")
+        self.get_logger().info(f"Konwersja na m/s: {[f'{speed:.2f}' for speed in self.powershift_max_speeds]} m/s")
+        self.get_logger().info("Oczekiwanie na odczyt aktualnego półbiegu z topiku /gears...")
 
     def gear_callback(self, msg):
-        """Odbiera stan biegu głównego i sprzęgła."""
-        if self.current_mechanical_gear != msg.gear and msg.gear != 0:
-            self.get_logger().info(f"Wykryto zmianę biegu głównego na {msg.gear}. Resetuję półbieg do {self.initial_powershift}.")
-            self.current_powershift = self.initial_powershift
-        self.current_mechanical_gear = msg.gear
+        """Odbiera stan biegu (półbiegu) i sprzęgła."""
+        # ZMIANA: msg.gear to jest półbieg (powershift), nie bieg główny
+        if not self.powershift_initialized and msg.gear > 0:
+            # Pierwszy odczyt - zainicjalizuj półbieg
+            self.current_powershift = msg.gear
+            self.powershift_initialized = True
+            self.get_logger().info(f"Zainicjalizowano półbieg na podstawie /gears: {self.current_powershift}")
+        elif self.current_powershift != msg.gear and msg.gear > 0:
+            # Zmiana półbiegu (ręczna przez operatora)
+            old_powershift = self.current_powershift
+            self.current_powershift = msg.gear
+            self.get_logger().info(f"Wykryto ręczną zmianę półbiegu: {old_powershift} -> {self.current_powershift}")
+        
+        # Aktualizuj stan sprzęgła
         self.clutch_pressed = (msg.clutch_state == 1)
         
-    def target_speed_callback(self, msg):
-        """Odbiera aktualną prędkość zadaną."""
-        self.target_speed = msg.data
+    def current_speed_callback(self, msg):
+        """Odbiera aktualną prędkość z GPS (filtrowaną)."""
+        self.current_speed = msg.speed_mps
+
+    def set_enabled_callback(self, request, response):
+        """Callback dla serwisu włączania/wyłączania gear managera."""
+        self.is_enabled = request.data
+        
+        if self.is_enabled:
+            self.get_logger().info("Gear Manager WŁĄCZONY przez web interface")
+            response.success = True
+            response.message = "Gear Manager włączony"
+        else:
+            self.get_logger().info("Gear Manager WYŁĄCZONY przez web interface")
+            response.success = True
+            response.message = "Gear Manager wyłączony"
+        
+        return response
 
     async def call_shift_service(self, client, direction):
         """Asynchronicznie wywołuje usługę zmiany biegu."""
@@ -93,8 +140,16 @@ class GearManagerNode(Node):
 
     async def decision_loop(self):
         """Główna pętla, która podejmuje decyzje o zmianie półbiegów."""
+        # --- NOWY: Sprawdź czy gear manager jest włączony ---
+        if not self.is_enabled:
+            return
+        
+        # --- NOWY: Sprawdź czy półbieg został zainicjalizowany ---
+        if not self.powershift_initialized:
+            return
+        
         # --- Warunki bezpieczeństwa ---
-        if self.clutch_pressed or self.current_mechanical_gear == 0 or self.target_speed == 0.0:
+        if self.clutch_pressed or self.current_powershift == 0 or self.current_speed == 0.0:
             return
 
         # --- Cooldown po ostatniej zmianie ---
@@ -109,8 +164,10 @@ class GearManagerNode(Node):
             current_gear_max_speed = self.powershift_max_speeds[current_gear_index]
             upshift_speed_trigger = current_gear_max_speed * self.upshift_thresh_percent
             
-            if self.target_speed > upshift_speed_trigger:
-                self.get_logger().info(f"UPSHIFT: Cel ({self.target_speed:.2f} m/s) > Próg ({upshift_speed_trigger:.2f} m/s) dla biegu {self.current_powershift}.")
+            if self.current_speed > upshift_speed_trigger:
+                current_kmh = self.current_speed * 3.6
+                trigger_kmh = upshift_speed_trigger * 3.6
+                self.get_logger().info(f"UPSHIFT: Aktualna ({current_kmh:.1f} km/h) > Próg ({trigger_kmh:.1f} km/h) dla biegu {self.current_powershift}.")
                 if await self.call_shift_service(self.shift_up_client, "GÓRA"):
                     self.current_powershift += 1
                 return
@@ -121,8 +178,10 @@ class GearManagerNode(Node):
             lower_gear_max_speed = self.powershift_max_speeds[lower_gear_index]
             downshift_speed_trigger = lower_gear_max_speed * self.downshift_thresh_percent
 
-            if self.target_speed < downshift_speed_trigger:
-                self.get_logger().info(f"DOWNSHIFT: Cel ({self.target_speed:.2f} m/s) < Próg ({downshift_speed_trigger:.2f} m/s) dla biegu {self.current_powershift - 1}.")
+            if self.current_speed < downshift_speed_trigger:
+                current_kmh = self.current_speed * 3.6
+                trigger_kmh = downshift_speed_trigger * 3.6
+                self.get_logger().info(f"DOWNSHIFT: Aktualna ({current_kmh:.1f} km/h) < Próg ({trigger_kmh:.1f} km/h) dla biegu {self.current_powershift - 1}.")
                 if await self.call_shift_service(self.shift_down_client, "DÓŁ"):
                     self.current_powershift -= 1
                 return
@@ -158,7 +217,10 @@ class GearManagerNode(Node):
                 'current_powershift': self.current_powershift,
                 'current_mechanical_gear': self.current_mechanical_gear,
                 'clutch_pressed': self.clutch_pressed,
-                'target_speed': self.target_speed,
+                'current_speed_mps': self.current_speed,
+                'current_speed_kmh': self.current_speed * 3.6,
+                'is_enabled': self.is_enabled,
+                'powershift_initialized': self.powershift_initialized,
                 'errors': errors,
                 'warnings': warnings,
                 'cpu_usage': psutil.cpu_percent(),
