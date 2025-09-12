@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Aktualizacja danych w panelu głównym ---
         updateFloat('dist_long_main', message.relative_position.distance_longitudinal, 2);
         updateFloat('dist_lat_main', message.relative_position.distance_lateral, 2);
+        updateFloat('dist_straight_main', message.relative_position.distance_straight, 2);
         updateFloat('tractor_speed_main', message.tractor_gps_filtered.speed_mps, 4, 3.6);
         updateFloat('target_speed_main', message.target_speed.data, 4, 3.6);
 
