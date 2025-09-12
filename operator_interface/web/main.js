@@ -283,16 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const fullRangeMeters = 30; // -15m do +15m
             const baseScale = availableHeight / fullRangeMeters; // Skala dostosowana do wysokości kontenera
             
-            // Skalowanie - tylko gdy odległość przekracza zakres -15m do +15m
+            // Skalowanie - stałe niezależnie od odległości
             let scale = baseScale;
-            let vehicleScale = 1.0; // Pełny rozmiar ikon w zakresie -15m do +15m
-            
-            if (maxDistance > 15) {
-                // Dla odległości > 15m zmniejszamy skalę i ikony
-                const scaleFactor = 15 / maxDistance;
-                scale = baseScale * scaleFactor;
-                vehicleScale = Math.max(0.3, scaleFactor); // Ikony maleją proporcjonalnie
-            }
+            let vehicleScale = 1.0; // Stały rozmiar ikon
             
             
             // Pozycja sieczkarni w centrum z skalowaniem i offsetem
