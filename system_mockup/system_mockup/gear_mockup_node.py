@@ -19,8 +19,9 @@ class GearMockupNode(Node):
     Logika:
     - Po uruchomieniu: bieg 1, sprzęgło zwolnione
     - Zmiana biegów przez serwisy /gear_shift_up i /gear_shift_down
-    - Opóźnienie 1 sekunda przy zmianie biegów
+    - Opóźnienie 1 sekunda przy zmianie biegów (bez sprzęgła - jak półbiegi)
     - Biegi od 1 do 4
+    - Sprzęgło pozostaje w stanie ustawionym przez operatora
     """
     
     def __init__(self):
@@ -149,10 +150,10 @@ class GearMockupNode(Node):
         """Rozpoczyna proces zmiany biegu."""
         self.is_shifting = True
         self.shift_start_time = time.time()
-        self.clutch_state = 1  # Wciśnij sprzęgło podczas zmiany
+        # Usunięto automatyczne wciskanie sprzęgła - półbiegi nie wymagają sprzęgła
         
         self.get_logger().info(f"Rozpoczęto zmianę biegu: {self.current_gear} -> {self.target_gear}")
-        self.get_logger().info(f"Sprzęgło wciśnięte, oczekiwanie {self.shift_delay}s...")
+        self.get_logger().info(f"Oczekiwanie {self.shift_delay}s...")
     
     def shift_process_callback(self):
         """Callback timera obsługującego proces zmiany biegu."""
@@ -166,10 +167,9 @@ class GearMockupNode(Node):
             # Zakończ zmianę biegu
             self.current_gear = self.target_gear
             self.is_shifting = False
-            self.clutch_state = 0  # Zwolnij sprzęgło
+            # Usunięto automatyczne zwalnianie sprzęgła - półbiegi nie wymagają sprzęgła
             
             self.get_logger().info(f"Zmiana biegu zakończona: bieg {self.current_gear}")
-            self.get_logger().info("Sprzęgło zwolnione")
     
     def publish_gear_data(self):
         """Publikuje aktualne dane biegów."""
