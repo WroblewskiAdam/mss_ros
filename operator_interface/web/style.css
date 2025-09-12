@@ -257,7 +257,7 @@ button:disabled {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0;
     transition: all 0.3s ease;
     cursor: pointer;
 }
@@ -341,16 +341,19 @@ button:disabled {
     transform: scale(1.05);
 }
 
-.speed-label {
+.speed-display {
+    position: absolute;
     background: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem 0.4rem;
     border-radius: var(--radius-sm);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     white-space: nowrap;
     border: 1px solid rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(4px);
+    z-index: 100;
+    pointer-events: none;
 }
 
 /* Animacja ikon pojazdów */
@@ -731,9 +734,9 @@ button:disabled {
         height: 95px;
     }
     
-    .speed-label {
-        font-size: 0.7rem;
-        padding: 0.2rem 0.4rem;
+    .speed-display {
+        font-size: 0.65rem;
+        padding: 0.22rem 0.35rem;
     }
 }
 
@@ -813,8 +816,9 @@ button:disabled {
     }
     
     .speed-label {
-        font-size: 0.7rem;
-        padding: 0.2rem 0.4rem;
+        font-size: 0.45rem;
+        padding: 0.01rem 0.01rem;
+        margin-top: 0;
     }
 }
 

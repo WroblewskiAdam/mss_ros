@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (message.tractor_gps_filtered.speed_mps !== PLACEHOLDER_FLOAT) {
             const tractorSpeedEl = document.getElementById('tractor-speed');
             if (tractorSpeedEl) {
-                const speedKmh = (message.tractor_gps_filtered.speed_mps * 3.6).toFixed(4);
+                const speedKmh = (message.tractor_gps_filtered.speed_mps * 3.6).toFixed(2);
                 tractorSpeedEl.textContent = `${speedKmh} km/h`;
             }
         }
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (message.chopper_gps.speed_mps !== PLACEHOLDER_FLOAT) {
             const chopperSpeedEl = document.getElementById('chopper-speed');
             if (chopperSpeedEl) {
-                const speedKmh = (message.chopper_gps.speed_mps * 3.6).toFixed(4);
+                const speedKmh = (message.chopper_gps.speed_mps * 3.6).toFixed(2);
                 chopperSpeedEl.textContent = `${speedKmh} km/h`;
             }
         }
@@ -345,6 +345,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tractorRefPoint && SHOW_REFERENCE_POINTS) {
                 tractorRefPoint.style.left = `${tractorX}px`;
                 tractorRefPoint.style.top = `${tractorY}px`;
+            }
+            
+            // Pozycjonowanie pól prędkości bezpośrednio pod ikonami
+            const chopperSpeedEl = document.getElementById('chopper-speed');
+            if (chopperSpeedEl) {
+                chopperSpeedEl.style.left = `${containerCenterX - chopperSpeedEl.offsetWidth/2}px`;
+                chopperSpeedEl.style.top = `${containerCenterY + chopperHeight/2 + 5}px`;
+            }
+            
+            const tractorSpeedEl = document.getElementById('tractor-speed');
+            if (tractorSpeedEl) {
+                tractorSpeedEl.style.left = `${tractorX - tractorSpeedEl.offsetWidth/2}px`;
+                tractorSpeedEl.style.top = `${tractorY - tractorSpeedEl.offsetHeight/2 + 80}px`;
             }
         }
     }
@@ -1239,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Informacje o ROS
         updateText('ros_version', 'ROS2 Humble');
         updateText('system_arch', 'ARM64 (Raspberry Pi)');
-        updateText('rpi_model', 'Raspberry Pi 4B');
+        updateText('rpi_model', 'Raspberry Pi 5');
         
         // Status ROS Bridge
         updateConnectionStatus('ros_bridge_status', ros.isConnected);
