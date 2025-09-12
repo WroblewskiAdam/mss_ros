@@ -718,14 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
             speedControllerLed.className = 'status-led off';
         }
 
-        // Aktualizacja statusu gear manager (symulacja - w rzeczywistości potrzebujesz osobnego topiku)
-        if (message.tractor_gear.gear !== 255) {
-            gearManagerStatus.textContent = 'AKTYWNY';
-            gearManagerStatus.className = 'status-display active';
-        } else {
-            gearManagerStatus.textContent = 'NIEAKTYWNY';
-            gearManagerStatus.className = 'status-display inactive';
-        }
+        // Status gear manager będzie aktualizowany przez subskrypcję health
 
         // Aktualizacja wyświetlacza biegu
         if (message.tractor_gear.gear !== 255) {
@@ -845,23 +838,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- NOWY: Klient serwisu gear manager ---
+    const setGearManagerClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/gear_manager/set_enabled',
+        serviceType: 'std_srvs/srv/SetBool'
+    });
+
     // --- Logika przełącznika gear manager ---
     let isGearManagerEnabled = false;
     
     toggleGearManagerBtn.onclick = () => {
-        isGearManagerEnabled = !isGearManagerEnabled;
+        const targetState = !isGearManagerEnabled;
+        const request = new ROSLIB.ServiceRequest({ data: targetState });
         
-        if (isGearManagerEnabled) {
-            toggleGearManagerBtn.textContent = 'WŁĄCZONE';
-            toggleGearManagerBtn.className = 'btn-toggle btn-toggle-on';
-            showNotification('Automatyczne zarządzanie biegami włączone', 'success');
-            updateLastCommand('Włączono gear manager');
-        } else {
-            toggleGearManagerBtn.textContent = 'WYŁĄCZONE';
-            toggleGearManagerBtn.className = 'btn-toggle btn-toggle-off';
-            showNotification('Automatyczne zarządzanie biegami wyłączone', 'warning');
-            updateLastCommand('Wyłączono gear manager');
-        }
+        setGearManagerClient.callService(request, (result) => {
+            if (result.success) {
+                isGearManagerEnabled = targetState;
+                
+                if (isGearManagerEnabled) {
+                    toggleGearManagerBtn.textContent = 'WŁĄCZONE';
+                    toggleGearManagerBtn.className = 'btn-toggle btn-toggle-on';
+                    showNotification('Automatyczne zarządzanie biegami włączone', 'success');
+                    updateLastCommand('Włączono gear manager');
+                } else {
+                    toggleGearManagerBtn.textContent = 'WYŁĄCZONE';
+                    toggleGearManagerBtn.className = 'btn-toggle btn-toggle-off';
+                    showNotification('Automatyczne zarządzanie biegami wyłączone', 'warning');
+                    updateLastCommand('Wyłączono gear manager');
+                }
+            } else {
+                showNotification("Nie udało się zmienić stanu gear managera!", 'error');
+            }
+        });
     };
     // ====================================================
     
@@ -1025,6 +1034,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 // === STARA FUNKCJA: Zachowuję dla kompatybilności ===
                 // Aktualizacja statusu węzła w czasie rzeczywistym
                 updateNodeHealthRealTime(nodeName, healthData);
+                
+                // === NOWY: Specjalna obsługa gear_manager_node ===
+                if (nodeName === 'gear_manager_node' && healthData.is_enabled !== undefined) {
+                    isGearManagerEnabled = healthData.is_enabled;
+                    
+                    if (isGearManagerEnabled) {
+                        toggleGearManagerBtn.textContent = 'WŁĄCZONE';
+                        toggleGearManagerBtn.className = 'btn-toggle btn-toggle-on';
+                        gearManagerStatus.textContent = 'AKTYWNY';
+                        gearManagerStatus.className = 'status-display active';
+                    } else {
+                        toggleGearManagerBtn.textContent = 'WYŁĄCZONE';
+                        toggleGearManagerBtn.className = 'btn-toggle btn-toggle-off';
+                        gearManagerStatus.textContent = 'NIEAKTYWNY';
+                        gearManagerStatus.className = 'status-display inactive';
+                    }
+                }
                 
             } catch (error) {
                 console.error(`Błąd parsowania health dla ${nodeName}:`, error);
