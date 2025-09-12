@@ -1,4 +1,4 @@
-# Copyright 2024 Your Name
+# Copyright 2015 Open Source Robotics Foundation, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,24 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import unittest
-
-from ament_copyright import get_copyright_names
-from ament_copyright import get_file_names
-from ament_copyright import has_copyright
-from ament_copyright import main
+from ament_copyright.main import main
+import pytest
 
 
-class TestCopyright(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.path = os.path.dirname(__file__)
-
-    def test_copyright(self):
-        main(['--exclude', 'test', '--exclude', 'build', '--exclude', 'install', '--exclude', 'log', '.'])
-
-
-if __name__ == '__main__':
-    unittest.main()
+# Remove the `skip` decorator once the source file(s) have a copyright header
+@pytest.mark.skip(reason='No copyright header has been placed in the generated source file.')
+@pytest.mark.copyright
+@pytest.mark.linter
+def test_copyright():
+    rc = main(argv=['.', 'test'])
+    assert rc == 0, 'Found errors'

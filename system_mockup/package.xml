@@ -1,14 +1,15 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>gps_mockup</name>
+  <name>system_mockup</name>
   <version>0.0.0</version>
-  <description>GPS Mockup package for simulating GPS data from tractor and chopper</description>
+  <description>System Mockup package for simulating GPS data and gear data from tractor and chopper</description>
   <maintainer email="adam01wroblewski@gmail.com">pi</maintainer>
-  <license>MIT</license>
+  <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>my_robot_interfaces</depend>
   
   <test_depend>ament_copyright</test_depend>

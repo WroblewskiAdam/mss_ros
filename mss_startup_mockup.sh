@@ -22,10 +22,10 @@ if ! command -v ros2 &> /dev/null; then
     exit 1
 fi
 
-# Sprawdzanie czy pakiet gps_mockup jest zbudowany
-if [ ! -d "/home/pi/mss_ros/install/gps_mockup" ]; then
-    echo "BŁĄD: Pakiet gps_mockup nie jest zbudowany!"
-    echo "Uruchom: cd /home/pi/mss_ros && colcon build --packages-select gps_mockup"
+# Sprawdzanie czy pakiet system_mockup jest zbudowany
+if [ ! -d "/home/pi/mss_ros/install/system_mockup" ]; then
+    echo "BŁĄD: Pakiet system_mockup nie jest zbudowany!"
+    echo "Uruchom: cd /home/pi/mss_ros && colcon build --packages-select system_mockup"
     exit 1
 fi
 

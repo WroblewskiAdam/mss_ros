@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'gps_mockup'
+package_name = 'system_mockup'
 
 setup(
     name=package_name,
@@ -15,12 +15,13 @@ setup(
     zip_safe=True,
     maintainer='pi',
     maintainer_email='adam01wroblewski@gmail.com',
-    description='GPS Mockup package for simulating GPS data from tractor and chopper',
-    license='MIT',
+    description='System Mockup package for simulating GPS data and gear data from tractor and chopper',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'mockup_node = gps_mockup.mockup_node:main'
+            'gps_mockup_node = system_mockup.gps_mockup_node:main',
+            'gear_mockup_node = system_mockup.gear_mockup_node:main'
         ],
     },
 )

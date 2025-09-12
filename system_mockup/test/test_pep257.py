@@ -1,4 +1,4 @@
-# Copyright 2024 Your Name
+# Copyright 2015 Open Source Robotics Foundation, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,22 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import unittest
-
-from ament_flake8 import get_file_names
-from ament_flake8 import main
+from ament_pep257.main import main
+import pytest
 
 
-class TestFlake8(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.path = os.path.dirname(__file__)
-
-    def test_flake8(self):
-        main(['--exclude', 'test', '--exclude', 'build', '--exclude', 'install', '--exclude', 'log', '.'])
-
-
-if __name__ == '__main__':
-    unittest.main()
+@pytest.mark.linter
+@pytest.mark.pep257
+def test_pep257():
+    rc = main(argv=['.', 'test'])
+    assert rc == 0, 'Found code style errors / warnings'

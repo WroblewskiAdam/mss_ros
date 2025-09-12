@@ -30,6 +30,8 @@ class MSSHealthMonitorNode(Node):
             'gps_rtk_node',
             'bt_receiver_node',
             'gear_reader_node',
+            'gps_mockup_node',          # === NOWY: Węzeł symulacji GPS ===
+            'gear_mockup_node',         # === NOWY: Węzeł symulacji biegów ===
             'servo_controller',
             'gear_shifter',
             'speed_filter_node',

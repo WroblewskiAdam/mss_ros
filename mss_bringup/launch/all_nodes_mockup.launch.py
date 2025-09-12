@@ -11,8 +11,8 @@ def generate_launch_description():
         
         # === MOCKUP: Węzeł symulujący dane GPS ===
         Node(
-            package='gps_mockup',
-            executable='mockup_node',
+            package='system_mockup',
+            executable='gps_mockup_node',
             name='gps_mockup_node',
             output='screen',
             emulate_tty=True,
@@ -44,13 +44,20 @@ def generate_launch_description():
         #     emulate_tty=True
         # ),
         
-        # Gear reader pozostaje aktywny (symuluje dane z ciągnika)
+        # === MOCKUP: Węzeł symulujący dane biegów ===
         Node(
-            package='gear_reader',
-            executable='gear_reader_node',
-            name='gear_reader_node',
+            package='system_mockup',
+            executable='gear_mockup_node',
+            name='gear_mockup_node',
             output='screen',
             emulate_tty=True,
+            parameters=[{
+                'publish_frequency_hz': 10.0,
+                'shift_delay_sec': 1.0,
+                'initial_gear': 1,
+                'max_gear': 4,
+                'min_gear': 1,
+            }]
         ),
 
         # === Węzły wykonawcze (aktuatory) ===
