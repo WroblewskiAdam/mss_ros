@@ -274,6 +274,7 @@ button:disabled {
 /* Ciągnik będzie obracany dynamicznie przez JavaScript */
 #tractor .vehicle-icon {
     transform-origin: center center;
+    transition: transform 0.3s ease;
 }
 
 /* Style dla prostych prostokątów */

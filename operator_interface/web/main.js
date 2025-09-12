@@ -184,15 +184,75 @@ document.addEventListener('DOMContentLoaded', () => {
             const vizContainer = document.getElementById('viz-container');
             const tractorElement = document.getElementById('tractor');
             const chopperElement = document.getElementById('chopper');
-            const scale = 20;
             
-            // Pozycja ciągnika względem sieczkarni
-            let top = (vizContainer.clientHeight / 2) - (message.relative_position.distance_longitudinal * scale);
-            let left = (vizContainer.clientWidth / 2) + (message.relative_position.distance_lateral * scale);
-            tractorElement.style.top = `${top}px`;
-            tractorElement.style.left = `${left}px`;
+            // 3. Realistyczne skalowanie - jak prawdziwe podjeżdżanie
+            const maxDistance = Math.max(
+                Math.abs(message.relative_position.distance_longitudinal),
+                Math.abs(message.relative_position.distance_lateral)
+            );
             
-            // Pozycjonowanie pojazdów - bez obracania
+            // 1. Ustawienie marginesów i dostępnej przestrzeni
+            const margin = 25; // Margines z każdej strony
+            const containerCenterX = vizContainer.clientWidth / 2;
+            const containerCenterY = vizContainer.clientHeight / 2;
+            
+            // Dostępna przestrzeń z marginesami
+            const availableWidth = vizContainer.clientWidth - (margin * 2);
+            const availableHeight = vizContainer.clientHeight - (margin * 2);
+            
+            // Skala bazowa - cała wysokość wizualizacji = 30m (od -15m do +15m)
+            const fullRangeMeters = 30; // -15m do +15m
+            const baseScale = availableHeight / fullRangeMeters; // Skala dostosowana do wysokości kontenera
+            
+            // Skalowanie - tylko gdy odległość przekracza zakres -15m do +15m
+            let scale = baseScale;
+            let vehicleScale = 1.0; // Pełny rozmiar ikon w zakresie -15m do +15m
+            
+            if (maxDistance > 15) {
+                // Dla odległości > 15m zmniejszamy skalę i ikony
+                const scaleFactor = 15 / maxDistance;
+                scale = baseScale * scaleFactor;
+                vehicleScale = Math.max(0.3, scaleFactor); // Ikony maleją proporcjonalnie
+            }
+            
+            
+            // Pozycja sieczkarni w centrum z skalowaniem
+            const chopperWidth = 40 * vehicleScale;
+            const chopperHeight = 42 * vehicleScale;
+            chopperElement.style.left = `${containerCenterX - chopperWidth/2}px`;
+            chopperElement.style.top = `${containerCenterY - chopperHeight/2}px`;
+            
+            // Skalowanie prostokąta sieczkarni
+            const chopperIcon = chopperElement.querySelector('.vehicle-icon');
+            if (chopperIcon) {
+                chopperIcon.style.transform = `scale(${vehicleScale})`;
+            }
+            
+            // 2. Obliczenie heading względnego ciągnika względem sieczkarni
+            let relativeHeading = 0;
+            if (message.tractor_gps_filtered.heading_deg !== PLACEHOLDER_FLOAT && 
+                message.chopper_gps.heading_deg !== PLACEHOLDER_FLOAT) {
+                relativeHeading = message.tractor_gps_filtered.heading_deg - message.chopper_gps.heading_deg;
+                // Normalizacja do zakresu -180 do 180 stopni
+                while (relativeHeading > 180) relativeHeading -= 360;
+                while (relativeHeading < -180) relativeHeading += 360;
+            }
+            
+            // 3. Pozycja ciągnika względem sieczkarni (centrum)
+            const tractorX = containerCenterX + (message.relative_position.distance_lateral * scale);
+            const tractorY = containerCenterY - (message.relative_position.distance_longitudinal * scale);
+            
+            // Pozycjonowanie ciągnika z skalowaniem
+            const tractorWidth = 30 * vehicleScale;
+            const tractorHeight = 130 * vehicleScale;
+            tractorElement.style.left = `${tractorX - tractorWidth/2}px`;
+            tractorElement.style.top = `${tractorY - tractorHeight/2}px`;
+            
+            // 4. Obracanie i skalowanie ciągnika
+            const tractorIcon = tractorElement.querySelector('.vehicle-icon');
+            if (tractorIcon) {
+                tractorIcon.style.transform = `rotate(${relativeHeading}deg) scale(${vehicleScale})`;
+            }
         }
         
         // --- Aktualizacja etykiet prędkości ---
