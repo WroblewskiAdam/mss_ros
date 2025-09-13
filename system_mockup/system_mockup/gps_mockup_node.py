@@ -25,8 +25,8 @@ class GpsMockupNode(Node):
         
         # Parametry
         self.declare_parameter('publish_frequency_hz', 10.0)
-        self.declare_parameter('tractor_speed_mps', 2.0)  # 2 m/s = ~7.2 km/h
-        self.declare_parameter('chopper_speed_mps', 1.9)  # 1.9 m/s = ~6.8 km/h (nieco wolniejsza)
+        self.declare_parameter('tractor_speed_kmh', 7.2)  # 7.2 km/h = ~2.0 m/s
+        self.declare_parameter('chopper_speed_kmh', 6.8)  # 6.8 km/h = ~1.9 m/s (nieco wolniejsza)
         self.declare_parameter('chopper_offset_m', 5.0)   # 5m za ciągnikiem
         self.declare_parameter('simulation_area_lat', 52.2297)  # Warszawa
         self.declare_parameter('simulation_area_lon', 21.0122)
@@ -39,8 +39,12 @@ class GpsMockupNode(Node):
         self.declare_parameter('tractor_heading_offset_deg', 0.0)   # Offset kursu (stopnie) - dodatnie = w prawo, ujemne = w lewo
         
         self.publish_frequency = self.get_parameter('publish_frequency_hz').get_parameter_value().double_value
-        self.tractor_speed = self.get_parameter('tractor_speed_mps').get_parameter_value().double_value
-        self.chopper_speed = self.get_parameter('chopper_speed_mps').get_parameter_value().double_value
+        
+        # Konwersja z km/h na m/s
+        tractor_speed_kmh = self.get_parameter('tractor_speed_kmh').get_parameter_value().double_value
+        chopper_speed_kmh = self.get_parameter('chopper_speed_kmh').get_parameter_value().double_value
+        self.tractor_speed = tractor_speed_kmh / 3.6  # km/h -> m/s
+        self.chopper_speed = chopper_speed_kmh / 3.6  # km/h -> m/s
         self.chopper_offset = self.get_parameter('chopper_offset_m').get_parameter_value().double_value
         self.base_lat = self.get_parameter('simulation_area_lat').get_parameter_value().double_value
         self.base_lon = self.get_parameter('simulation_area_lon').get_parameter_value().double_value
@@ -91,12 +95,12 @@ class GpsMockupNode(Node):
     def parameters_callback(self, params):
         """Callback do aktualizacji parametrów w czasie rzeczywistym"""
         for param in params:
-            if param.name == 'tractor_speed_mps':
-                self.tractor_speed = param.value
-                self.get_logger().info(f'Zaktualizowano prędkość ciągnika: {self.tractor_speed} m/s')
-            elif param.name == 'chopper_speed_mps':
-                self.chopper_speed = param.value
-                self.get_logger().info(f'Zaktualizowano prędkość sieczkarni: {self.chopper_speed} m/s')
+            if param.name == 'tractor_speed_kmh':
+                self.tractor_speed = param.value / 3.6  # km/h -> m/s
+                self.get_logger().info(f'Zaktualizowano prędkość ciągnika: {param.value} km/h ({self.tractor_speed:.2f} m/s)')
+            elif param.name == 'chopper_speed_kmh':
+                self.chopper_speed = param.value / 3.6  # km/h -> m/s
+                self.get_logger().info(f'Zaktualizowano prędkość sieczkarni: {param.value} km/h ({self.chopper_speed:.2f} m/s)')
             elif param.name == 'chopper_offset_m':
                 self.chopper_offset = param.value
                 self.get_logger().info(f'Zaktualizowano offset sieczkarni: {self.chopper_offset} m')
