@@ -191,6 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFloat('dist_straight_main', message.relative_position.distance_straight, 2);
         updateFloat('tractor_speed_main', message.tractor_gps_filtered.speed_mps, 4, 3.6);
         updateFloat('target_speed_main', message.target_speed.data, 4, 3.6);
+        
+        // Aktualizacja biegu w panelu głównym
+        const gearValue = message.tractor_gear.gear === 255 ? '---' : message.tractor_gear.gear;
+        updateText('current_gear_main', gearValue);
 
         // --- Aktualizacja danych w zakładce "Szczegóły" ---
         // Status Systemu
