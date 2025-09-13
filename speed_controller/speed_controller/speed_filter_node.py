@@ -24,7 +24,7 @@ class SpeedFilterNode(Node):
         fs = self.get_parameter('sampling_frequency_hz').get_parameter_value().double_value
 
         sensor_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=10
         )

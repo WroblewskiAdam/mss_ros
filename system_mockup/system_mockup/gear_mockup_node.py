@@ -47,9 +47,9 @@ class GearMockupNode(Node):
         self.shift_start_time = 0.0
         self.target_gear = initial_gear
         
-        # QoS
+        # QoS - RELIABLE dla kompatybilności z gear_manager_node
         qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=10
         )
@@ -57,9 +57,10 @@ class GearMockupNode(Node):
         # Publisher
         self.gear_publisher = self.create_publisher(Gear, '/gears', qos_profile)
         
-        # Serwisy do zmiany biegów
-        self.shift_up_service = self.create_service(SetBool, '/gear_shift_up', self.shift_up_callback)
-        self.shift_down_service = self.create_service(SetBool, '/gear_shift_down', self.shift_down_callback)
+        # Subskrypcja do informacji o zmianie biegów z gear_controller
+        self.gear_shift_subscription = self.create_subscription(
+            String, '/gears/events', self.gear_shift_callback, 10
+        )
         
         # Serwis do symulacji sprzęgła (opcjonalny)
         self.clutch_service = self.create_service(SetBool, '/gear_mockup/set_clutch', self.set_clutch_callback)
@@ -76,61 +77,47 @@ class GearMockupNode(Node):
         self.get_logger().info(f"Początkowy bieg: {self.current_gear}")
         self.get_logger().info(f"Opóźnienie zmiany: {self.shift_delay}s")
         self.get_logger().info(f"Zakres biegów: {self.min_gear}-{self.max_gear}")
-        self.get_logger().info("Serwisy dostępne: /gear_shift_up, /gear_shift_down, /gear_mockup/set_clutch")
+        self.get_logger().info("Serwis dostępny: /gear_mockup/set_clutch")
+        self.get_logger().info("Subskrybuje /gears/events z gear_controller")
     
-    def shift_up_callback(self, request, response):
-        """Callback dla serwisu zmiany biegu w górę."""
-        if not request.data:
-            response.success = False
-            response.message = "Serwis wymaga request.data = true"
-            return response
-        
+    def gear_shift_callback(self, msg):
+        """Callback dla informacji o zmianie biegów z gear_controller."""
+        if msg.data == 'UP':
+            self.handle_shift_up()
+        elif msg.data == 'DOWN':
+            self.handle_shift_down()
+    
+    def handle_shift_up(self):
+        """Obsługuje zmianę biegu w górę."""
         if self.is_shifting:
-            response.success = False
-            response.message = f"Trwa zmiana biegu z {self.current_gear} na {self.target_gear}"
-            return response
+            self.get_logger().warn(f"Trwa zmiana biegu z {self.current_gear} na {self.target_gear}")
+            return
         
         if self.current_gear >= self.max_gear:
-            response.success = False
-            response.message = f"Już jesteś na najwyższym biegu ({self.max_gear})"
-            return response
+            self.get_logger().warn(f"Już jesteś na najwyższym biegu ({self.max_gear})")
+            return
         
         # Rozpocznij zmianę biegu w górę
         self.target_gear = self.current_gear + 1
         self.start_shift()
         
-        response.success = True
-        response.message = f"Rozpoczęto zmianę biegu z {self.current_gear} na {self.target_gear}"
         self.get_logger().info(f"UPSHIFT: {self.current_gear} -> {self.target_gear}")
-        
-        return response
     
-    def shift_down_callback(self, request, response):
-        """Callback dla serwisu zmiany biegu w dół."""
-        if not request.data:
-            response.success = False
-            response.message = "Serwis wymaga request.data = true"
-            return response
-        
+    def handle_shift_down(self):
+        """Obsługuje zmianę biegu w dół."""
         if self.is_shifting:
-            response.success = False
-            response.message = f"Trwa zmiana biegu z {self.current_gear} na {self.target_gear}"
-            return response
+            self.get_logger().warn(f"Trwa zmiana biegu z {self.current_gear} na {self.target_gear}")
+            return
         
         if self.current_gear <= self.min_gear:
-            response.success = False
-            response.message = f"Już jesteś na najniższym biegu ({self.min_gear})"
-            return response
+            self.get_logger().warn(f"Już jesteś na najniższym biegu ({self.min_gear})")
+            return
         
         # Rozpocznij zmianę biegu w dół
         self.target_gear = self.current_gear - 1
         self.start_shift()
         
-        response.success = True
-        response.message = f"Rozpoczęto zmianę biegu z {self.current_gear} na {self.target_gear}"
         self.get_logger().info(f"DOWNSHIFT: {self.current_gear} -> {self.target_gear}")
-        
-        return response
     
     def set_clutch_callback(self, request, response):
         """Callback dla serwisu ustawiania sprzęgła."""

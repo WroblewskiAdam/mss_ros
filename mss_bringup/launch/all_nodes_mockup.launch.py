@@ -18,8 +18,8 @@ def generate_launch_description():
             emulate_tty=True,
             parameters=[{
                 'publish_frequency_hz': 10.0,
-                'tractor_speed_mps': 3.0,  # 3 m/s = ~10.8 km/h
-                'chopper_speed_mps': 2.8,  # 2.8 m/s = ~10.1 km/h (nieco wolniejsza)
+                'tractor_speed_mps': 2.0,  # 3 m/s = ~10.8 km/h
+                'chopper_speed_mps': 1.8,  # 2.8 m/s = ~10.1 km/h (nieco wolniejsza)
                 'chopper_offset_m': 7.0,   # 7m za ciągnikiem
                 'simulation_area_lat': 50.0647,  # Kraków
                 'simulation_area_lon': 19.9450,

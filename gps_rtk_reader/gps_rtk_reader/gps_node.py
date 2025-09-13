@@ -39,7 +39,7 @@ class GpsRtkNode(Node):
         self.publish_frequency = self.get_parameter('publish_frequency').get_parameter_value().double_value
 
         qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=1
         )

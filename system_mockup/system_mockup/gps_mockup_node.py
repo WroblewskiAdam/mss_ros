@@ -50,9 +50,9 @@ class GpsMockupNode(Node):
         self.tractor_offset_lateral = self.get_parameter('tractor_offset_lateral').get_parameter_value().double_value
         self.tractor_heading_offset = self.get_parameter('tractor_heading_offset_deg').get_parameter_value().double_value
         
-        # QoS
+        # QoS - RELIABLE dla kompatybilności z innymi węzłami
         qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=10
         )

@@ -28,6 +28,9 @@ class GearShifter(Node):
         self.srv = self.create_service(SetBool, 'gear_shift_up', self.shift_up_callback)
         self.srv2 = self.create_service(SetBool, 'gear_shift_down', self.shift_down_callback)
 
+        # Publisher do informowania o zmianie biegów
+        self.gear_shift_pub = self.create_publisher(String, '/gears/events', 10)
+
         self.health_pub = self.create_publisher(String, '/mss/node_health/gear_shifter', 10)
         self.health_timer = self.create_timer(5.0, self.publish_health)
 
@@ -38,6 +41,12 @@ class GearShifter(Node):
     def shift_up_callback(self, request, response):
         self.get_logger().info('Gear up requested.')
         self._trigger_relay(self.relay_up_pin)
+        
+        # Opublikuj informację o zmianie biegu w górę
+        shift_msg = String()
+        shift_msg.data = 'UP'
+        self.gear_shift_pub.publish(shift_msg)
+        
         response.success = True
         response.message = 'Shifted up'
         return response
@@ -45,6 +54,12 @@ class GearShifter(Node):
     def shift_down_callback(self, request, response):
         self.get_logger().info('Gear down requested.')
         self._trigger_relay(self.relay_down_pin)
+        
+        # Opublikuj informację o zmianie biegu w dół
+        shift_msg = String()
+        shift_msg.data = 'DOWN'
+        self.gear_shift_pub.publish(shift_msg)
+        
         response.success = True
         response.message = 'Shifted down'
         return response
