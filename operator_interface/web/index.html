@@ -97,9 +97,9 @@
             <div class="controller-panel">
                 <!-- NOWA SEKCJA: Ustawianie prędkości zadanej + Kontrola regulatora -->
                 <div class="speed-control-section">
-                    <h3>🎯 Ustawianie Prędkości Zadanej</h3>
-                    <div class="speed-control-content">
-                        <!-- NOWA: Kompaktowa kontrola regulatora prędkości -->
+                    <h3>🎯 Regulator prędkości</h3>
+                    <div class="speed-control-content-compact">
+                        <!-- Kompaktowa kontrola regulatora prędkości -->
                         <div class="speed-controller-compact">
                             <div class="speed-controller-status">
                                 <div class="status-led" id="speed-controller-led"></div>
@@ -108,17 +108,11 @@
                             <button id="toggle-speed-controller-btn" class="btn-toggle btn-toggle-off">WYŁĄCZONA</button>
                         </div>
                         
-                        <div class="speed-input-group-large">
+                        <div class="speed-input-compact">
                             <label for="target-speed-regulator">Prędkość zadana:</label>
-                            <div class="speed-input-container">
-                                <input type="number" id="target-speed-regulator" min="0" max="20" step="0.1" value="5.0">
-                                <span class="unit-large">m/s</span>
-                                <button id="set-speed-regulator-btn" class="btn-control-large">Ustaw Prędkość</button>
-                            </div>
-                        </div>
-                        <div class="current-speed-display">
-                            <span class="speed-label">Aktualna prędkość:</span>
-                            <span class="speed-value" id="tractor_speed">--- m/s</span>
+                            <input type="number" id="target-speed-regulator" min="0" max="20" step="0.1" value="5.0">
+                            <span class="unit-large">m/s</span>
+                            <button id="set-speed-regulator-btn" class="btn-control-large">Ustaw</button>
                         </div>
                     </div>
                 </div>

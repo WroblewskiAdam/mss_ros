@@ -25,8 +25,8 @@ class GpsMockupNode(Node):
         
         # Parametry
         self.declare_parameter('publish_frequency_hz', 10.0)
-        self.declare_parameter('tractor_speed_kmh', 7.2)  # 7.2 km/h = ~2.0 m/s
-        self.declare_parameter('chopper_speed_kmh', 6.8)  # 6.8 km/h = ~1.9 m/s (nieco wolniejsza)
+        self.declare_parameter('tractor_speed_kmh', 7)  # 7.2 km/h = ~2.0 m/s
+        self.declare_parameter('chopper_speed_kmh', 6)  # 6.8 km/h = ~1.9 m/s (nieco wolniejsza)
         self.declare_parameter('chopper_offset_m', 5.0)   # 5m za ciągnikiem
         self.declare_parameter('simulation_area_lat', 52.2297)  # Warszawa
         self.declare_parameter('simulation_area_lon', 21.0122)

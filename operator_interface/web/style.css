@@ -846,10 +846,79 @@ button:disabled {
     gap: 1rem;
 }
 
+.speed-control-content-compact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
 .speed-input-group-large {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+}
+
+.speed-input-compact {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-light);
+    min-width: 300px;
+    flex: 1;
+    max-width: 400px;
+}
+
+.speed-input-compact label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.speed-input-compact input {
+    width: 80px;
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.speed-input-compact input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.speed-input-compact .unit-large {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    min-width: 30px;
+    font-weight: 500;
+}
+
+.speed-input-compact .btn-control-large {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    font-size: 0.875rem;
+}
+
+.speed-input-compact .btn-control-large:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
 }
 
 .speed-input-group-large label {
@@ -1281,6 +1350,19 @@ button:disabled {
     .speed-input-group {
         flex-direction: column;
         align-items: stretch;
+    }
+    
+    .speed-control-content-compact {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .speed-controller-compact,
+    .speed-input-compact {
+        min-width: auto;
+        max-width: none;
+        flex: none;
     }
 }
 
@@ -2062,8 +2144,10 @@ button:disabled {
     border-radius: var(--radius-md);
     padding: 0.75rem 1rem;
     border: 1px solid var(--border-light);
-    margin-bottom: 1rem;
     gap: 1rem;
+    min-width: 280px;
+    flex: 1;
+    max-width: 400px;
 }
 
 .speed-controller-status {

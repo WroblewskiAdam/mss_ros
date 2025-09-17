@@ -92,8 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
         data: {
             labels: [],
             datasets: [
-                { label: 'Prędkość zadana [m/s]', borderColor: '#ef4444', data: [], fill: false, pointRadius: 0, borderWidth: 2 },
-                { label: 'Prędkość aktualna [m/s]', borderColor: '#3b82f6', data: [], fill: false, pointRadius: 0, borderWidth: 2 },
+                { label: 'Prędkość zadana [km/h]', borderColor: '#ef4444', data: [], fill: false, pointRadius: 0, borderWidth: 2 },
+                { label: 'Prędkość aktualna [km/h]', borderColor: '#3b82f6', data: [], fill: false, pointRadius: 0, borderWidth: 2 },
                 { label: 'Sterowanie [kąt °]', borderColor: '#10b981', data: [], yAxisID: 'y-axis-2', fill: false, pointRadius: 0, borderWidth: 2 }
             ]
         },
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 y: { 
                     beginAtZero: true, 
                     ticks: { color: '#cbd5e1' }, 
-                    title: { display: true, text: 'Prędkość [m/s]', color: '#cbd5e1' },
+                    title: { display: true, text: 'Prędkość [km/h]', color: '#cbd5e1' },
                     grid: { color: '#475569' }
                 },
                 'y-axis-2': { 
@@ -228,8 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = new Date(message.header.stamp.sec * 1000 + message.header.stamp.nanosec / 1000000);
         
         controllerChart.data.labels.push(now);
-        controllerChart.data.datasets[0].data.push(message.setpoint_speed);
-        controllerChart.data.datasets[1].data.push(message.current_speed);
+        controllerChart.data.datasets[0].data.push(message.setpoint_speed * 3.6); // m/s -> km/h
+        controllerChart.data.datasets[1].data.push(message.current_speed * 3.6); // m/s -> km/h
         controllerChart.data.datasets[2].data.push(message.control_output);
 
         if (controllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
@@ -325,14 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFloat('tractor_speed_details', message.tractor_gps_filtered.speed_mps, 4, 3.6);
         updateFloat('target_speed', message.target_speed.data, 4, 3.6);
         
-        // Aktualizacja wyświetlacza prędkości w zakładce regulator
-        if (message.tractor_gps_filtered.speed_mps !== PLACEHOLDER_FLOAT) {
-            const speedMps = message.tractor_gps_filtered.speed_mps.toFixed(3);
-            const currentSpeedElement = document.getElementById('tractor_speed');
-            if (currentSpeedElement) {
-                currentSpeedElement.textContent = `${speedMps} m/s`;
-            }
-        }
+        // Prędkość aktualna jest teraz wyświetlana tylko na wykresie
         updateText('gear', message.tractor_gear.gear === 255 ? 'TIMEOUT' : message.tractor_gear.gear);
         updateText('clutch', clutchStatusMap[message.tractor_gear.clutch_state] || 'Nieznany');
         updateInt('servo_pos', message.servo_position.data);
