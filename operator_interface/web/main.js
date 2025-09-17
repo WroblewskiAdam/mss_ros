@@ -137,19 +137,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Inicjalizacja wykresu regulatora pozycji ---
+    const positionCtx = document.getElementById('position-controller-chart').getContext('2d');
+    const positionControllerChart = new Chart(positionCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                { label: 'Pozycja zadana [m]', borderColor: '#ef4444', data: [], fill: false, pointRadius: 0, borderWidth: 2 },
+                { label: 'Pozycja aktualna [m]', borderColor: '#3b82f6', data: [], fill: false, pointRadius: 0, borderWidth: 2 },
+                { label: 'Sterowanie [m/s]', borderColor: '#10b981', data: [], yAxisID: 'y-axis-2', fill: false, pointRadius: 0, borderWidth: 2 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            scales: {
+                x: { 
+                    type: 'time', 
+                    time: { unit: 'second' }, 
+                    ticks: { color: '#cbd5e1' },
+                    grid: { color: '#475569' }
+                },
+                y: { 
+                    beginAtZero: false, 
+                    ticks: { color: '#cbd5e1' }, 
+                    title: { display: true, text: 'Pozycja [m]', color: '#cbd5e1' },
+                    grid: { color: '#475569' }
+                },
+                'y-axis-2': { 
+                    type: 'linear', 
+                    position: 'right', 
+                    beginAtZero: true, 
+                    max: 10, 
+                    ticks: { color: '#cbd5e1' }, 
+                    title: { display: true, text: 'Prędkość [m/s]', color: '#cbd5e1' },
+                    grid: { display: false }
+                }
+            },
+            plugins: { 
+                legend: { 
+                    labels: { color: '#cbd5e1' },
+                    position: 'top'
+                } 
+            },
+            animation: false
+        }
+    });
+
     // --- Modal z nastawami ---
     const modal = document.getElementById('settings-modal');
     const settingsBtn = document.getElementById('settings-btn');
     const closeBtn = document.querySelector('.close');
+    
+    // --- Modal z nastawami regulatora pozycji ---
+    const positionModal = document.getElementById('position-settings-modal');
+    const positionSettingsBtn = document.getElementById('position-settings-btn');
+    const positionCloseBtn = positionModal ? positionModal.querySelector('.close') : null;
     
 
 
     settingsBtn.onclick = () => modal.style.display = 'block';
     closeBtn.onclick = () => modal.style.display = 'none';
     
+    if (positionSettingsBtn) {
+        positionSettingsBtn.onclick = () => positionModal.style.display = 'block';
+    }
+    if (positionCloseBtn) {
+        positionCloseBtn.onclick = () => positionModal.style.display = 'none';
+    }
+    
 
     window.onclick = (event) => {
         if (event.target === modal) modal.style.display = 'none';
+        if (event.target === positionModal) positionModal.style.display = 'none';
     };
 
     // --- Subskrypcja danych o wysokiej częstotliwości (dla wykresu) ---
@@ -180,7 +245,61 @@ document.addEventListener('DOMContentLoaded', () => {
         name: '/diagnostics',
         messageType: 'my_robot_interfaces/msg/DiagnosticData'
     });
-    
+
+    // --- Subskrypcje dla regulatora pozycji ---
+    const autopilotStatusListener = new ROSLIB.Topic({
+        ros: ros,
+        name: '/autopilot/status',
+        messageType: 'std_msgs/msg/String'
+    });
+
+    const distanceMetricsListener = new ROSLIB.Topic({
+        ros: ros,
+        name: '/distance_metrics',
+        messageType: 'my_robot_interfaces/msg/DistanceMetrics'
+    });
+
+    // --- Callback functions dla regulatora pozycji ---
+    autopilotStatusListener.subscribe((message) => {
+        const statusElement = document.getElementById('autopilot_status');
+        if (statusElement) {
+            statusElement.textContent = message.data;
+        }
+    });
+
+    distanceMetricsListener.subscribe((message) => {
+        const distanceElement = document.getElementById('current_distance_longitudinal');
+        if (distanceElement) {
+            distanceElement.textContent = message.distance_longitudinal.toFixed(2) + ' m';
+        }
+        
+        // Aktualizacja wykresu regulatora pozycji
+        if (window.lastTargetSpeed !== undefined) {
+            const now = new Date();
+            positionControllerChart.data.labels.push(now);
+            positionControllerChart.data.datasets[0].data.push(window.lastTargetPosition || 0.0);
+            positionControllerChart.data.datasets[1].data.push(message.distance_longitudinal);
+            positionControllerChart.data.datasets[2].data.push(window.lastTargetSpeed);
+
+            if (positionControllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
+                positionControllerChart.data.labels.shift();
+                positionControllerChart.data.datasets.forEach(dataset => dataset.data.shift());
+            }
+            positionControllerChart.update('none');
+        }
+    });
+
+    // --- Subskrypcja prędkości zadanej przez regulator pozycji ---
+    const targetSpeedListener = new ROSLIB.Topic({
+        ros: ros,
+        name: '/target_speed',
+        messageType: 'std_msgs/msg/Float64'
+    });
+
+    targetSpeedListener.subscribe((message) => {
+        window.lastTargetSpeed = message.data;
+    });
+
     const rtkStatusMap = { 0: 'BRAK', 1: 'SPS', 2: 'DGPS', 4: 'FIX', 5: 'FLOAT', 255: 'TIMEOUT' };
     const clutchStatusMap = { 0: 'Zwolnione', 1: 'WCIŚNIĘTE', 255: 'TIMEOUT' };
 
@@ -367,10 +486,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const kpValueSpan = document.getElementById('kp-value');
     const kiValueSpan = document.getElementById('ki-value');
     const kdValueSpan = document.getElementById('kd-value');  // Dodany span Kd
+    
+    // --- Logika strojenia regulatora pozycji ---
+    const positionKpSlider = document.getElementById('position-kp-slider');
+    const positionKiSlider = document.getElementById('position-ki-slider');
+    const positionToleranceSlider = document.getElementById('position-tolerance-slider');
+    const speedToleranceSlider = document.getElementById('speed-tolerance-slider');
+    const positionKpValueSpan = document.getElementById('position-kp-value');
+    const positionKiValueSpan = document.getElementById('position-ki-value');
+    const positionToleranceValueSpan = document.getElementById('position-tolerance-value');
+    const speedToleranceValueSpan = document.getElementById('speed-tolerance-value');
 
     kpSlider.oninput = () => kpValueSpan.textContent = parseFloat(kpSlider.value).toFixed(1);
     kiSlider.oninput = () => kiValueSpan.textContent = parseFloat(kiSlider.value).toFixed(1);
     kdSlider.oninput = () => kdValueSpan.textContent = parseFloat(kdSlider.value).toFixed(1);
+    
+    // Slajdery regulatora pozycji
+    if (positionKpSlider) {
+        positionKpSlider.oninput = () => positionKpValueSpan.textContent = parseFloat(positionKpSlider.value).toFixed(1);
+    }
+    if (positionKiSlider) {
+        positionKiSlider.oninput = () => positionKiValueSpan.textContent = parseFloat(positionKiSlider.value).toFixed(2);
+    }
+    if (positionToleranceSlider) {
+        positionToleranceSlider.oninput = () => positionToleranceValueSpan.textContent = parseFloat(positionToleranceSlider.value).toFixed(1);
+    }
+    if (speedToleranceSlider) {
+        speedToleranceSlider.oninput = () => speedToleranceValueSpan.textContent = parseFloat(speedToleranceSlider.value).toFixed(2);
+    }
     
     // Serwis do ustawiania parametrów
     const setParamsClient = new ROSLIB.Service({
@@ -398,6 +541,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    // --- Serwis do ustawiania parametrów regulatora pozycji ---
+    const setPositionParamsClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/position_controller_node/set_parameters',
+        serviceType: 'rcl_interfaces/srv/SetParameters'
+    });
+
+    const applyPositionPidBtn = document.getElementById('apply-position-pid-btn');
+    if (applyPositionPidBtn) {
+        applyPositionPidBtn.onclick = () => {
+            const params = [
+                { name: 'Kp', value: { type: 2, double_value: parseFloat(positionKpSlider.value) } },
+                { name: 'Ki', value: { type: 2, double_value: parseFloat(positionKiSlider.value) } },
+                { name: 'position_tolerance', value: { type: 2, double_value: parseFloat(positionToleranceSlider.value) } },
+                { name: 'speed_tolerance', value: { type: 2, double_value: parseFloat(speedToleranceSlider.value) } }
+            ];
+            const request = new ROSLIB.ServiceRequest({ parameters: params });
+            setPositionParamsClient.callService(request, (result) => {
+                if (result.results.every(r => r.successful)) {
+                    showNotification('Parametry regulatora pozycji zaktualizowane!', 'success');
+                } else {
+                    showNotification('Błąd aktualizacji parametrów regulatora pozycji!', 'error');
+                }
+                // Automatyczne zamknięcie okienka popup
+                if (positionModal) {
+                    positionModal.style.display = 'none';
+                }
+            });
+        };
+    }
 
     // --- Status połączenia i autopilota ---
     const connectionStatusDiv = document.getElementById('connection-status');
@@ -436,6 +610,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const setSpeedControllerClient = new ROSLIB.Service({
         ros: ros,
         name: '/speed_controller/set_enabled',
+        serviceType: 'std_srvs/srv/SetBool'
+    });
+
+    // --- NOWY: Serwis dla regulatora pozycji ---
+    const setPositionControllerClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/position_controller/set_enabled',
         serviceType: 'std_srvs/srv/SetBool'
     });
 
@@ -634,6 +815,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleSpeedControllerBtn = document.getElementById('toggle-speed-controller-btn');
     const gearManagerStatus = document.getElementById('gear-manager-status');
     const toggleGearManagerBtn = document.getElementById('toggle-gear-manager-btn');
+    
+    // Elementy UI regulatora pozycji
+    const positionControllerLed = document.getElementById('position-controller-led');
+    const togglePositionControllerBtn = document.getElementById('toggle-position-controller-btn');
+    const targetPositionInput = document.getElementById('target-position-regulator');
+    const setPositionBtn = document.getElementById('set-position-regulator-btn');
     const gearUpBtn = document.getElementById('gear-up-btn');
     const gearDownBtn = document.getElementById('gear-down-btn');
     const currentGearDisplay = document.getElementById('current-gear-display');
@@ -1019,6 +1206,74 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    // --- Logika przełącznika regulatora pozycji ---
+    if (togglePositionControllerBtn) {
+        togglePositionControllerBtn.onclick = () => {
+            const targetState = !isPositionControllerEnabled;
+            const request = new ROSLIB.ServiceRequest({ data: targetState });
+            
+            setPositionControllerClient.callService(request, (result) => {
+                if (result.success) {
+                    isPositionControllerEnabled = targetState;
+                    
+                    if (isPositionControllerEnabled) {
+                        togglePositionControllerBtn.textContent = 'WŁĄCZONY';
+                        togglePositionControllerBtn.className = 'btn-toggle btn-toggle-on';
+                        showNotification('Autopilot pozycji włączony', 'success');
+                        updateLastCommand('Włączono autopilot pozycji');
+                        
+                        if (positionControllerLed) {
+                            positionControllerLed.className = 'status-led on';
+                        }
+                    } else {
+                        togglePositionControllerBtn.textContent = 'WYŁĄCZONY';
+                        togglePositionControllerBtn.className = 'btn-toggle btn-toggle-off';
+                        showNotification('Autopilot pozycji wyłączony', 'info');
+                        updateLastCommand('Wyłączono autopilot pozycji');
+                        
+                        if (positionControllerLed) {
+                            positionControllerLed.className = 'status-led off';
+                        }
+                    }
+                } else {
+                    showNotification('Błąd zmiany stanu autopilota pozycji', 'error');
+                    updateLastCommand('Błąd zmiany stanu autopilota pozycji');
+                }
+            });
+        };
+    }
+
+    // --- Logika ustawiania pozycji zadanej ---
+    if (setPositionBtn && targetPositionInput) {
+        setPositionBtn.onclick = () => {
+            const targetPosition = parseFloat(targetPositionInput.value);
+            if (!isNaN(targetPosition)) {
+                // Ustawienie pozycji zadanej przez serwis
+                const request = new ROSLIB.ServiceRequest({
+                    parameters: [{
+                        name: 'target_distance',
+                        value: {
+                            type: 'double',
+                            double_value: targetPosition
+                        }
+                    }]
+                });
+                
+                setPositionParamsClient.callService(request, (result) => {
+                    if (result.successful) {
+                        window.lastTargetPosition = targetPosition;
+                        showNotification(`Ustawiono pozycję zadaną: ${targetPosition} m`, 'success');
+                        updateLastCommand(`Ustawiono pozycję zadaną: ${targetPosition} m`);
+                    } else {
+                        showNotification('Błąd ustawiania pozycji zadanej', 'error');
+                    }
+                });
+            } else {
+                showNotification('Nieprawidłowa wartość pozycji', 'error');
+            }
+        };
+    }
     // ====================================================
     
     // === NOWE SUBSKRYPCJE DIAGNOSTYCZNE ===

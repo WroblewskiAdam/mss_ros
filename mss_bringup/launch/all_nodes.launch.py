@@ -139,6 +139,27 @@ def generate_launch_description():
             emulate_tty=True,
         ),
         
+        # === Regulator Pozycji (Autopilot) ===
+        Node(
+            package='position_controller',
+            executable='position_controller_node',
+            name='position_controller_node',
+            output='screen',
+            emulate_tty=True,
+            parameters=[{
+                'target_distance': 0.0,
+                'position_tolerance': 0.5,
+                'speed_tolerance': 0.28,
+                'Kp': 1.0,
+                'Ki': 0.1,
+                'min_speed': 0.5,
+                'max_speed': 8.0,
+                'max_acceleration': 0.5,
+                'gps_timeout': 2.0,
+                'control_frequency': 10.0
+            }]
+        ),
+        
         # === Węzły pomocnicze (kluczowe dla UI) ===
         Node(
             package='mss_diagnostics',
