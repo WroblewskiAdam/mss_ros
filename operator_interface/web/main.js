@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             datasets: [
                 { label: 'Pozycja zadana [m]', borderColor: '#ef4444', data: [], fill: false, pointRadius: 0, borderWidth: 2 },
                 { label: 'Pozycja aktualna [m]', borderColor: '#3b82f6', data: [], fill: false, pointRadius: 0, borderWidth: 2 },
-                { label: 'Sterowanie [m/s]', borderColor: '#10b981', data: [], yAxisID: 'y-axis-2', fill: false, pointRadius: 0, borderWidth: 2 }
+                { label: 'Sterowanie [km/h]', borderColor: '#10b981', data: [], yAxisID: 'y-axis-2', fill: false, pointRadius: 0, borderWidth: 2 }
             ]
         },
         options: {
@@ -173,9 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     type: 'linear', 
                     position: 'right', 
                     beginAtZero: true, 
-                    max: 10, 
+                    max: 36, 
                     ticks: { color: '#cbd5e1' }, 
-                    title: { display: true, text: 'Prędkość [m/s]', color: '#cbd5e1' },
+                    title: { display: true, text: 'Prędkość [km/h]', color: '#cbd5e1' },
                     grid: { display: false }
                 }
             },
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
             positionControllerChart.data.labels.push(now);
             positionControllerChart.data.datasets[0].data.push(window.lastTargetPosition || 0.0);
             positionControllerChart.data.datasets[1].data.push(message.distance_longitudinal);
-            positionControllerChart.data.datasets[2].data.push(window.lastTargetSpeed);
+            positionControllerChart.data.datasets[2].data.push((window.lastTargetSpeed || 0) * 3.6); // m/s -> km/h
 
             if (positionControllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
                 positionControllerChart.data.labels.shift();
