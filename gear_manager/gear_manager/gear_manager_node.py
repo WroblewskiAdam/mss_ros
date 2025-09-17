@@ -15,20 +15,22 @@ class GearManagerNode(Node):
         
         # --- Parametry ---
         self.declare_parameter('powershift_max_speeds_kmh', [8.4, 13.0, 16.8, 25.2])  # km/h
-        self.declare_parameter('upshift_threshold_percent', 0.95)
-        self.declare_parameter('downshift_threshold_percent', 0.85)
+        self.declare_parameter('upshift_speeds_kmh', [7.5, 12.0, 15.5, 24.0])  # km/h - progi upshift
+        self.declare_parameter('downshift_speeds_kmh', [-6.0, 10.0, 13.5, 20.0])  # km/h - progi downshift
         self.declare_parameter('shift_cooldown_sec', 2.0)
         self.declare_parameter('max_powershift', 4)
         
         # Pobierz parametry
         powershift_max_speeds_kmh = self.get_parameter('powershift_max_speeds_kmh').get_parameter_value().double_array_value
-        self.upshift_thresh_percent = self.get_parameter('upshift_threshold_percent').get_parameter_value().double_value
-        self.downshift_thresh_percent = self.get_parameter('downshift_threshold_percent').get_parameter_value().double_value
+        upshift_speeds_kmh = self.get_parameter('upshift_speeds_kmh').get_parameter_value().double_array_value
+        downshift_speeds_kmh = self.get_parameter('downshift_speeds_kmh').get_parameter_value().double_array_value
         self.shift_cooldown = self.get_parameter('shift_cooldown_sec').get_parameter_value().double_value
         self.max_powershift = self.get_parameter('max_powershift').get_parameter_value().integer_value
         
         # Konwersja km/h na m/s
         self.powershift_max_speeds = [speed / 3.6 for speed in powershift_max_speeds_kmh]
+        self.upshift_speeds = [speed / 3.6 for speed in upshift_speeds_kmh]
+        self.downshift_speeds = [speed / 3.6 for speed in downshift_speeds_kmh]
         
         # --- Zmienne stanu ---
         self.current_powershift = 0  # Aktualny półbieg (0 = nieznany)
@@ -36,7 +38,7 @@ class GearManagerNode(Node):
         self.clutch_pressed = False  # Stan sprzęgła
         self.last_shift_time = self.get_clock().now()  # Czas ostatniej zmiany
         self.powershift_initialized = False  # Czy półbieg został odczytany przy starcie
-        self.is_enabled = True  # Stan włączania/wyłączania gear managera
+        self.is_enabled = False  # Stan włączania/wyłączania gear managera
         
         # --- Health monitoring ---
         self.shift_attempts = 0
@@ -83,8 +85,9 @@ class GearManagerNode(Node):
         
         # --- Logowanie ---
         self.get_logger().info("=== GEAR MANAGER NODE STARTED ===")
-        self.get_logger().info(f"Maksymalne prędkości półbiegów: {powershift_max_speeds_kmh} km/h")
-        self.get_logger().info(f"Progi: upshift={self.upshift_thresh_percent*100}%, downshift={self.downshift_thresh_percent*100}%")
+        # self.get_logger().info(f"Maksymalne prędkości półbiegów: {powershift_max_speeds_kmh} km/h")
+        self.get_logger().info(f"Progi upshift: {upshift_speeds_kmh} km/h")
+        self.get_logger().info(f"Progi downshift: {downshift_speeds_kmh} km/h")
         self.get_logger().info(f"Cooldown: {self.shift_cooldown}s")
         self.get_logger().info("Oczekiwanie na odczyt aktualnego półbiegu z topiku /gears...")
 
@@ -177,8 +180,7 @@ class GearManagerNode(Node):
         
         # --- LOGIKA ZMIANY BIEGU W GÓRĘ ---
         if self.current_powershift < self.max_powershift:
-            current_gear_max_speed = self.powershift_max_speeds[current_gear_index]
-            upshift_speed_trigger = current_gear_max_speed * self.upshift_thresh_percent
+            upshift_speed_trigger = self.upshift_speeds[current_gear_index]
             
             if self.current_speed > upshift_speed_trigger:
                 current_kmh = self.current_speed * 3.6
@@ -195,9 +197,7 @@ class GearManagerNode(Node):
         
         # --- LOGIKA ZMIANY BIEGU W DÓŁ ---
         if self.current_powershift > 1:
-            lower_gear_index = current_gear_index - 1
-            lower_gear_max_speed = self.powershift_max_speeds[lower_gear_index]
-            downshift_speed_trigger = lower_gear_max_speed * self.downshift_thresh_percent
+            downshift_speed_trigger = self.downshift_speeds[current_gear_index]
             
             if self.current_speed < downshift_speed_trigger:
                 current_kmh = self.current_speed * 3.6
