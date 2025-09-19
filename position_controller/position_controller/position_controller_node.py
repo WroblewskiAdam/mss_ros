@@ -39,6 +39,7 @@ class PositionControllerNode(Node):
         
         # --- Zmienne stanu ---
         self.is_enabled = False  # Stan włączania/wyłączania autopilota
+        self.activation_conditions_checked = False  # Czy warunki aktywacji zostały już sprawdzone
         self.current_distance_longitudinal = 0.0  # Aktualna odległość wzdłużna
         self.tractor_speed = 0.0  # Prędkość ciągnika
         self.harvester_speed = 0.0  # Prędkość sieczkarni
@@ -136,10 +137,14 @@ class PositionControllerNode(Node):
             self.get_logger().info("Autopilot WŁĄCZONY")
             # Reset integratora przy włączeniu
             self.integral_error = 0.0
+            # Reset flagi warunków aktywacji - będą sprawdzone przy pierwszym uruchomieniu
+            self.activation_conditions_checked = False
         else:
             self.get_logger().info("Autopilot WYŁĄCZONY")
             # Reset integratora przy wyłączeniu
             self.integral_error = 0.0
+            # Reset flagi warunków aktywacji
+            self.activation_conditions_checked = False
         
         response.success = True
         response.message = f"Autopilot {'włączony' if self.is_enabled else 'wyłączony'}"
@@ -176,19 +181,25 @@ class PositionControllerNode(Node):
         # Sygnał sterujący
         control_signal = p_term + i_term
         
-        return control_signal
+        # Zwróć szczegółowe informacje o członach
+        return {
+            'control_signal': control_signal,
+            'p_term': p_term,
+            'i_term': i_term,
+            'integral_error': self.integral_error
+        }
 
-    def apply_anti_windup(self, control_signal, actual_speed, dt):
+    def apply_anti_windup(self, target_speed, actual_speed, dt):
         """Stosuje mechanizm anti-windup."""
         # Sprawdź czy sygnał sterujący jest nasycony
-        if control_signal > self.max_speed:
+        if target_speed >= self.max_speed:
             # Sygnał nasycony w górę - blokuj integrator jeśli błąd ma ten sam znak
             if self.integral_error > 0:
-                self.integral_error -= (control_signal - self.max_speed) * dt / self.Ki
-        elif control_signal < self.min_speed:
+                self.integral_error -= (target_speed - self.max_speed) * dt / self.Ki
+        elif target_speed <= self.min_speed:
             # Sygnał nasycony w dół - blokuj integrator jeśli błąd ma ten sam znak
             if self.integral_error < 0:
-                self.integral_error -= (control_signal - self.min_speed) * dt / self.Ki
+                self.integral_error -= (target_speed - self.min_speed) * dt / self.Ki
 
     def apply_limits(self, target_speed):
         """Stosuje ograniczenia prędkości i przyspieszenia."""
@@ -222,12 +233,25 @@ class PositionControllerNode(Node):
         if not self.is_enabled:
             return
         
-        # Sprawdź warunki aktywacji
-        conditions_ok, condition_msg = self.check_activation_conditions()
-        if not conditions_ok:
-            self.get_logger().warn(f"Autopilot nieaktywny: {condition_msg}")
-            self.publish_status("NIEAKTYWNY", condition_msg)
-            return
+        # Sprawdź warunki aktywacji tylko przy pierwszym uruchomieniu
+        if not self.activation_conditions_checked:
+            conditions_ok, condition_msg = self.check_activation_conditions()
+            if not conditions_ok:
+                self.get_logger().warn(f"Autopilot nieaktywny: {condition_msg}")
+                self.publish_status("NIEAKTYWNY", condition_msg)
+                return
+            else:
+                self.get_logger().info(f"Warunki aktywacji spełnione: {condition_msg}")
+                self.activation_conditions_checked = True
+                # Log nastaw regulatora przy aktywacji
+                self.get_logger().info(
+                    f"NASTAWY REGULATORA POZYCJI: "
+                    f"Kp={self.Kp:.3f}, Ki={self.Ki:.3f}, "
+                    f"Tolerancja pozycji={self.position_tolerance:.2f}m, "
+                    f"Tolerancja prędkości={self.speed_tolerance:.2f}m/s, "
+                    f"Min prędkość={self.min_speed:.2f}m/s, "
+                    f"Max prędkość={self.max_speed:.2f}m/s"
+                )
         
         # Oblicz błąd pozycji
         position_error = self.target_distance - self.current_distance_longitudinal
@@ -239,16 +263,20 @@ class PositionControllerNode(Node):
             dt = 1.0 / self.control_frequency  # Fallback
         
         # Oblicz sygnał sterujący PI
-        speed_correction = self.calculate_pi_control(position_error, dt)
-        
-        # Zastosuj anti-windup
-        self.apply_anti_windup(speed_correction, self.tractor_speed, dt)
+        pi_result = self.calculate_pi_control(position_error, dt)
+        speed_correction = pi_result['control_signal']
         
         # Oblicz docelową prędkość z feed-forward
         target_speed = self.calculate_feedforward() + speed_correction
         
         # Zastosuj ograniczenia
         target_speed = self.apply_limits(target_speed)
+        
+        # Zastosuj anti-windup na końcowej prędkości
+        self.apply_anti_windup(target_speed, self.tractor_speed, dt)
+        
+        # Aktualizuj czas ostatniej regulacji
+        self.last_control_time = current_time
         
         # Publikuj docelową prędkość
         speed_msg = Float64()
@@ -258,11 +286,15 @@ class PositionControllerNode(Node):
         # Publikuj status
         self.publish_status("AKTYWNY", f"Błąd: {position_error:.2f}m, Prędkość: {target_speed:.2f}m/s")
         
-        # Logowanie debug
-        self.get_logger().debug(
-            f"Regulacja: błąd={position_error:.2f}m, "
-            f"korekta={speed_correction:.2f}m/s, "
-            f"cel={target_speed:.2f}m/s"
+        # Szczegółowe logowanie diagnostyczne
+        self.get_logger().info(
+            f"REGULACJA POZYCJI: "
+            f"Błąd={position_error:.3f}m, "
+            f"P={pi_result['p_term']:.3f}m/s, "
+            f"I={pi_result['i_term']:.3f}m/s, "
+            f"Integral={pi_result['integral_error']:.3f}, "
+            f"Korekta={speed_correction:.3f}m/s, "
+            f"Cel={target_speed:.3f}m/s"
         )
 
     def publish_status(self, status, message):
