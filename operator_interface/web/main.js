@@ -274,19 +274,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Aktualizacja wykresu regulatora pozycji
-        if (window.lastTargetSpeed !== undefined) {
-            const now = new Date();
-            positionControllerChart.data.labels.push(now);
-            positionControllerChart.data.datasets[0].data.push(window.lastTargetPosition || 0.0);
-            positionControllerChart.data.datasets[1].data.push(message.distance_longitudinal);
-            positionControllerChart.data.datasets[2].data.push((window.lastTargetSpeed || 0) * 3.6); // m/s -> km/h
+        const now = new Date();
+        positionControllerChart.data.labels.push(now);
+        positionControllerChart.data.datasets[0].data.push(window.lastTargetPosition || 0.0);
+        positionControllerChart.data.datasets[1].data.push(message.distance_longitudinal);
+        positionControllerChart.data.datasets[2].data.push((window.lastTargetSpeed || 0) * 3.6); // m/s -> km/h
 
-            if (positionControllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
-                positionControllerChart.data.labels.shift();
-                positionControllerChart.data.datasets.forEach(dataset => dataset.data.shift());
-            }
-            positionControllerChart.update('none');
+        if (positionControllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
+            positionControllerChart.data.labels.shift();
+            positionControllerChart.data.datasets.forEach(dataset => dataset.data.shift());
         }
+        positionControllerChart.update('none');
     });
 
     // --- Subskrypcja prędkości zadanej przez regulator pozycji ---
