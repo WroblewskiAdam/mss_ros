@@ -19,7 +19,7 @@ def generate_launch_description():
             parameters=[{
                 'publish_frequency_hz': 10.0,
                 'tractor_speed_kmh': 7.2,  # 7.2 km/h = ~2.0 m/s
-                'chopper_speed_kmh': 6.5,  # 6.5 km/h = ~1.8 m/s (nieco wolniejsza)
+                'chopper_speed_kmh': 7.2,  # 6.5 km/h = ~1.8 m/s (nieco wolniejsza)
                 'chopper_offset_m': 7.0,   # 7m za ciągnikiem
                 'simulation_area_lat': 50.0647,  # Kraków
                 'simulation_area_lon': 19.9450,
