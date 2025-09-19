@@ -36,6 +36,7 @@ class SpeedControllerNode(Node):
         # ... (reszta pobierania parametrów bez zmian)
         self.v_idle = self.get_parameter('v_idle').get_parameter_value().double_value
         self.servo_min_angle = self.get_parameter('servo_min_angle').get_parameter_value().integer_value
+        self.servo_max_angle = self.get_parameter('servo_max_angle').get_parameter_value().integer_value
         self.controller_frequency = self.get_parameter('controller_frequency').get_parameter_value().double_value
         self.output_min = self.get_parameter('output_min').get_parameter_value().double_value
         self.output_max = self.get_parameter('output_max').get_parameter_value().double_value
@@ -47,6 +48,16 @@ class SpeedControllerNode(Node):
         self.integral_sum = 0.0
         self.clutch_pressed = False
         self.autopilot_enabled = False
+        self.current_gear = 1  # Aktualny bieg (1-4)
+        
+        # --- FEEDFORWARD: Współczynniki wielomianów 3. stopnia dla inicjalizacji integratora ---
+        # Format: [a3, a2, a1, a0] dla wielomianu: angle = a3*s³ + a2*s² + a1*s + a0
+        self.feedforward_coefficients = {
+            1: [0.5873549785294848, 13.40037863553026, 14.653379751052785, -34.52735487782364],
+            2: [1.4600581419748402, -0.7755560817553078, 38.18436232184589, -57.7959979072928],
+            3: [3.821886722815732, -22.385212129313977, 85.72752018970289, -99.19677542430101],
+            4: [0.32581512631611265, 0.5479366362622122, 17.692958476521984, -45.46624605117514]
+        }
 
         # --- QoS ---
         default_qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=10)
@@ -77,7 +88,9 @@ class SpeedControllerNode(Node):
         self.health_timer = self.create_timer(5.0, self.publish_health)
         # USUNIĘTO: Timer publikowania parametrów co 5 sekund
         
-        self.get_logger().info("Węzeł regulatora prędkości PI uruchomiony.")
+        self.get_logger().info("Węzeł regulatora prędkości PI z feedforward uruchomiony.")
+        self.get_logger().info(f"FEEDFORWARD: Wielomiany 3. stopnia załadowane dla biegów: {list(self.feedforward_coefficients.keys())}")
+        self.get_logger().info("Feedforward używany TYLKO do inicjalizacji integratora przy włączaniu autopilota")
 
     def update_parameter_and_variable(self, param_name, value, variable_name):
         """Aktualizuje zmienną wewnętrzną."""
@@ -150,16 +163,60 @@ class SpeedControllerNode(Node):
         self.autopilot_enabled = request.data
         if self.autopilot_enabled:
             self.get_logger().warn("AUTOPILOT AKTYWOWANY.")
-            self.integral_sum = 0.0
+            
+            # --- FEEDFORWARD: Inicjalizacja integratora na podstawie wielomianu 3. stopnia ---
+            # Zamiast resetować integrator na 0, ustawiamy go na wartość z charakterystyki statycznej
+            # Używamy AKTUALNEJ prędkości ciągnika (już zsynchronizowanej z sieczkarnią)
+            # Dzięki temu unikamy szarpnięcia przy włączaniu autopilota
+            integrator_init_value = self.calculate_integrator_initialization(self.current_speed_mps)
+            self.integral_sum = integrator_init_value
+            
+            self.get_logger().info(f"Integrator zainicjalizowany wartością: {integrator_init_value:.1f}° (na podstawie aktualnej prędkości: {self.current_speed_mps:.2f}m/s)")
         else:
             self.get_logger().warn("AUTOPILOT DEZAKTYWOWANY.")
+            self.integral_sum = 0.0  # Reset integratora przy wyłączaniu
             self.set_servo_to_zero_and_wait()
         response.success = True
         return response
 
     def target_speed_callback(self, msg): self.target_speed_mps = msg.data if msg.data >= self.v_idle else self.v_idle
     def current_speed_callback(self, msg): self.current_speed_mps = msg.speed_mps
-    def gear_callback(self, msg): self.clutch_pressed = (msg.clutch_state == 1)
+    def gear_callback(self, msg): 
+        self.clutch_pressed = (msg.clutch_state == 1)
+        self.current_gear = msg.gear  # Aktualizuj aktualny bieg
+
+    def calculate_integrator_initialization(self, current_speed_mps):
+        """
+        Oblicza wartość inicjalizacji integratora na podstawie wielomianu 3. stopnia.
+        Używane tylko przy włączaniu autopilota aby uniknąć szarpnięcia.
+        
+        Args:
+            current_speed_mps: Aktualna prędkość ciągnika w m/s (już zsynchronizowana z sieczkarnią)
+            
+        Returns:
+            float: Wartość inicjalizacji integratora
+        """
+        if self.current_gear not in self.feedforward_coefficients:
+            self.get_logger().warn(f"Brak współczynników feedforward dla biegu {self.current_gear}")
+            return 0.0
+        
+        # Pobierz współczynniki dla aktualnego biegu
+        coeffs = self.feedforward_coefficients[self.current_gear]
+        a3, a2, a1, a0 = coeffs
+        
+        # Oblicz wielomian 3. stopnia: angle = a3*s³ + a2*s² + a1*s + a0
+        # gdzie s to prędkość względem prędkości jałowej
+        s = current_speed_mps
+        
+        # Oblicz wartość wielomianu
+        feedforward_angle = a3 * (s**3) + a2 * (s**2) + a1 * s + a0
+        
+        # Ogranicz do zakresu serwa
+        feedforward_angle = max(self.servo_min_angle, min(self.servo_max_angle, feedforward_angle))
+        
+        self.get_logger().info(f"INICJALIZACJA INTEGRATORA: bieg={self.current_gear}, aktualna_prędkość={current_speed_mps:.2f}m/s, s={s:.2f}, angle={feedforward_angle:.1f}°")
+        
+        return feedforward_angle
 
     def controller_loop(self):
         saturated_control_signal = 0.0
