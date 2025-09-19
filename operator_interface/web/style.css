@@ -2203,6 +2203,15 @@ button:disabled {
     border: 1px solid var(--border-light);
 }
 
+.position-control-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .position-control-content {
     display: flex;
     flex-direction: column;
@@ -2314,5 +2323,175 @@ button:disabled {
     color: var(--accent-secondary);
     font-size: 1rem;
     text-transform: uppercase;
+}
+
+/* === NOWE STYLE DLA 3 POL W JEDNEJ LINII - REGULATOR POZYCJI === */
+
+/* Kontener dla 3 pól w jednej linii */
+.position-control-content-inline {
+    display: flex;
+    gap: 1.5rem;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+/* Pojedyncze pole */
+.position-field {
+    flex: 1;
+    min-width: 250px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    border: 1px solid var(--border-light);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 120px;
+}
+
+/* Nagłówek pola */
+.position-field-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.field-title {
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Kontener input dla pozycji zadanej */
+.position-field .position-input-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.75rem;
+    height: 40px;
+}
+
+.position-field .position-input-container input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    min-width: 60px;
+}
+
+.position-field .position-input-container .unit-large {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    min-width: 20px;
+}
+
+/* Przycisk w polu */
+.position-field .btn-control-large {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.position-field .btn-control-large:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+/* Przycisk w kontenerze input */
+.position-field .position-input-container .btn-control-large {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    width: auto;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+/* Przycisk toggle w polu autopilota */
+.position-field .btn-toggle {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Wartość aktualnej pozycji */
+.current-position-value {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    font-family: 'Courier New', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+}
+
+/* Responsywność */
+@media (max-width: 1024px) {
+    .position-control-content-inline {
+        gap: 1rem;
+    }
+    
+    .position-field {
+        min-width: 200px;
+    }
+}
+
+@media (max-width: 768px) {
+    .position-control-content-inline {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .position-field {
+        min-width: auto;
+        flex: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .position-field {
+        padding: 0.75rem;
+    }
+    
+    .position-field .position-input-container input {
+        min-width: 50px;
+        font-size: 0.9rem;
+    }
+    
+    .current-position-value {
+        font-size: 1rem;
+        padding: 0.5rem 0.75rem;
+    }
 }
 

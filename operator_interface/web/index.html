@@ -110,8 +110,8 @@
                         
                         <div class="speed-input-compact">
                             <label for="target-speed-regulator">Prędkość zadana:</label>
-                            <input type="number" id="target-speed-regulator" min="0" max="20" step="0.1" value="5.0">
-                            <span class="unit-large">m/s</span>
+                            <input type="number" id="target-speed-regulator" min="0" max="72" step="0.1" value="7.0">
+                            <span class="unit-large">km/h</span>
                             <button id="set-speed-regulator-btn" class="btn-control-large">Ustaw</button>
                         </div>
                     </div>
@@ -129,31 +129,34 @@
                 <!-- NOWA SEKCJA: Regulator Pozycji (Autopilot) -->
                 <div class="position-control-section">
                     <h3>🎯 Regulator Pozycji (Autopilot)</h3>
-                    <div class="position-control-content">
-                        <!-- Kontrola autopilota -->
-                        <div class="position-controller-compact">
-                            <div class="position-controller-status">
+                    <div class="position-control-content-inline">
+                        <!-- Pole 1: Kontrola autopilota -->
+                        <div class="position-field">
+                            <div class="position-field-header">
                                 <div class="status-led" id="position-controller-led"></div>
-                                <span class="status-text">Autopilot</span>
+                                <span class="field-title">Autopilot</span>
                             </div>
                             <button id="toggle-position-controller-btn" class="btn-toggle btn-toggle-off">WYŁĄCZONY</button>
                         </div>
                         
-                        <div class="position-input-group-large">
-                            <label for="target-position-regulator">Pozycja zadana:</label>
+                        <!-- Pole 2: Pozycja zadana -->
+                        <div class="position-field">
+                            <div class="position-field-header">
+                                <span class="field-title">Pozycja zadana</span>
+                            </div>
                             <div class="position-input-container">
                                 <input type="number" id="target-position-regulator" min="-5" max="5" step="0.1" value="0.0">
                                 <span class="unit-large">m</span>
                                 <button id="set-position-regulator-btn" class="btn-control-large">Ustaw Pozycję</button>
                             </div>
                         </div>
-                        <div class="current-position-display">
-                            <span class="position-label">Aktualna odległość:</span>
-                            <span class="position-value" id="current_distance_longitudinal">--- m</span>
-                        </div>
-                        <div class="autopilot-status-display">
-                            <span class="status-label">Status autopilota:</span>
-                            <span class="status-value" id="autopilot_status">NIEAKTYWNY</span>
+                        
+                        <!-- Pole 3: Aktualna pozycja -->
+                        <div class="position-field">
+                            <div class="position-field-header">
+                                <span class="field-title">Aktualna odległość</span>
+                            </div>
+                            <div class="current-position-value" id="current_distance_longitudinal">--- m</div>
                         </div>
                     </div>
                 </div>
@@ -716,8 +719,8 @@
                     <input type="range" id="position-tolerance-slider" min="0.1" max="2.0" value="0.5" step="0.1">
                 </div>
                 <div class="settings-group">
-                    <label for="speed-tolerance-slider">Tolerancja prędkości: <span id="speed-tolerance-value">0.28</span> m/s</label>
-                    <input type="range" id="speed-tolerance-slider" min="0.1" max="1.0" value="0.28" step="0.01">
+                    <label for="speed-tolerance-slider">Tolerancja prędkości: <span id="speed-tolerance-value">1.0</span> km/h</label>
+                    <input type="range" id="speed-tolerance-slider" min="0.1" max="3.6" value="1.0" step="0.1">
                 </div>
                 <button id="apply-position-pid-btn" class="btn-apply">Zastosuj Parametry</button>
             </div>
