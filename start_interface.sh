@@ -9,9 +9,9 @@ echo "Data: $(date)"
 echo "================================"
 
 # Sprawdzanie czy jesteśmy w odpowiednim katalogu
-if [ ! -f "index.html" ]; then
-    echo "BŁĄD: Nie jestem w katalogu web!"
-    echo "Przejdź do: cd operator_interface/web"
+if [ ! -d "operator_interface/web" ]; then
+    echo "BŁĄD: Nie jestem w katalogu src!"
+    echo "Przejdź do: cd mss_ros/src"
     exit 1
 fi
 
@@ -118,9 +118,15 @@ else
     exit 1
 fi
 
+# Przejdź do katalogu web
+cd operator_interface/web
+
 # Uruchom web server w tle
 $PYTHON_CMD -m http.server 8080 > webserver.log 2>&1 &
 WEBSERVER_PID=$!
+
+# Wróć do katalogu src
+cd ../..
 
 # Poczekaj na uruchomienie
 sleep 2
@@ -128,7 +134,7 @@ sleep 2
 # Sprawdź czy web server działa
 if ! kill -0 $WEBSERVER_PID 2>/dev/null; then
     echo "❌ Web server nie uruchomił się!"
-    echo "Sprawdź logi: cat webserver.log"
+    echo "Sprawdź logi: cat operator_interface/web/webserver.log"
     kill $ROSBRIDGE_PID 2>/dev/null
     exit 1
 fi
@@ -136,7 +142,7 @@ fi
 # Sprawdź czy port 8080 jest otwarty
 if ! lsof -i :8080 >/dev/null 2>&1; then
     echo "❌ Port 8080 nie został otwarty!"
-    echo "Sprawdź logi: cat webserver.log"
+    echo "Sprawdź logi: cat operator_interface/web/webserver.log"
     kill $WEBSERVER_PID 2>/dev/null
     kill $ROSBRIDGE_PID 2>/dev/null
     exit 1
@@ -158,7 +164,7 @@ echo "   Web Server: PID $WEBSERVER_PID (Port 8080)"
 echo ""
 echo "📝 Logi:"
 echo "   ROS Bridge: cat rosbridge.log"
-echo "   Web Server: cat webserver.log"
+echo "   Web Server: cat operator_interface/web/webserver.log"
 echo ""
 echo "💡 Zatrzymaj: Ctrl+C"
 echo ""
