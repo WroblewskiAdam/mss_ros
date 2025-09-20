@@ -922,15 +922,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // NOWA: Sterowanie prędkością z zakładki Regulator
     setSpeedRegulatorBtn.onclick = () => {
-        const targetSpeed = parseFloat(targetSpeedRegulator.value);
-        if (isNaN(targetSpeed) || targetSpeed < 0) {
+        const targetSpeedKmh = parseFloat(targetSpeedRegulator.value);
+        if (isNaN(targetSpeedKmh) || targetSpeedKmh < 0) {
             showNotification('Nieprawidłowa prędkość!', 'error');
             return;
         }
 
+        // Przelicz z km/h na m/s
+        const targetSpeedMps = targetSpeedKmh / 3.6;
+
         // Publikuj na topik /target_speed (tak jak speed_teleop_node)
         const speedMsg = new ROSLIB.Message({
-            data: targetSpeed
+            data: targetSpeedMps
         });
         
         const speedPublisher = new ROSLIB.Topic({
