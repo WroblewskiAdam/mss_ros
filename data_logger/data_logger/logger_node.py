@@ -62,7 +62,7 @@ class DataLoggerNode(Node):
         # === Subskrypcje ===
         self.servo_target_subscription = self.create_subscription(StampedInt32, '/servo/set_angle', self.servo_target_callback, qos_profile=sensor_qos_profile)
         self.servo_position_subscription = self.create_subscription(StampedInt32, '/servo/position', self.servo_position_callback, qos_profile=sensor_qos_profile)
-        self.gps_subscription = self.create_subscription(GpsRtk, '/gps_rtk_data', self.gps_log_callback, qos_profile=sensor_qos_profile)
+        self.gps_subscription = self.create_subscription(GpsRtk, '/gps_rtk_data/tractor', self.gps_log_callback, qos_profile=sensor_qos_profile)
         self.imu_data_raw_subscription = self.create_subscription(Imu, '/imu/data_raw', self.imu_log_callback, qos_profile=sensor_qos_profile)
         self.mag_subscription = self.create_subscription(MagneticField, '/imu/mag', self.mag_update_callback, qos_profile=sensor_qos_profile)
             
@@ -77,7 +77,7 @@ class DataLoggerNode(Node):
         # Subskrypcja dla filtrowanej prędkości (główny wyzwalacz zapisu)
         self.filtered_speed_subscription = self.create_subscription(
             GpsRtk,
-            '/gps_rtk_data_filtered',
+            '/gps_rtk_data/tractor_filtered',
             self.speed_control_log_callback, # Nowy callback do zapisu
             qos_profile=sensor_qos_profile)
         # ----------------------------------------------------------

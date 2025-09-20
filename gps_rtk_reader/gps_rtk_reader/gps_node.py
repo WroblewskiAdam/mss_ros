@@ -43,7 +43,7 @@ class GpsRtkNode(Node):
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=1
         )
-        self.publisher_ = self.create_publisher(GpsRtk, 'gps_rtk_data', qos_profile)
+        self.publisher_ = self.create_publisher(GpsRtk, '/gps_rtk_data/tractor', qos_profile)
 
         # === NOWY PUBLISHER: Health reporting ===
         self.health_pub = self.create_publisher(String, '/mss/node_health/gps_rtk_node', qos_profile)
@@ -81,7 +81,7 @@ class GpsRtkNode(Node):
             self.get_logger().error("Inicjalizacja nie powiodła się. Node nie będzie działać poprawnie.")
 
         self.publish_timer = self.create_timer(1.0 / self.publish_frequency, self._publish_gps_data_callback)
-        self.get_logger().info(f"GPS RTK Node uruchomiony. Publikowanie na '/gps_rtk_data' z częstotliwością {self.publish_frequency} Hz.")
+        self.get_logger().info(f"GPS RTK Node uruchomiony. Publikowanie na '/gps_rtk_data/tractor' z częstotliwością {self.publish_frequency} Hz.")
         self.get_logger().info("Node oczekuje teraz na wiadomości GNGGA oraz AGRIC.")
 
     def publish_health(self):

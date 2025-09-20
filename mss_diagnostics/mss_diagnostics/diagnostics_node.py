@@ -40,8 +40,8 @@ class DiagnosticsNode(Node):
         self.diag_publisher = self.create_publisher(DiagnosticData, '/diagnostics', 10)
 
         # --- Subskrybenci ---
-        self.create_subscription(GpsRtk, '/gps_rtk_data_filtered', self.tractor_gps_callback, qos_profile)
-        self.create_subscription(GpsRtk, '/gps_rtk_data/chopper', self.chopper_gps_callback, qos_profile)
+        self.create_subscription(GpsRtk, '/gps_rtk_data/tractor_filtered', self.tractor_gps_callback, qos_profile)
+        self.create_subscription(GpsRtk, '/gps_rtk_data/chopper_filtered', self.chopper_gps_callback, qos_profile)
         self.create_subscription(StampedInt32, '/servo/position', self.servo_pos_callback, qos_profile)
         self.create_subscription(Gear, '/gears', self.gear_callback, qos_profile)
         self.create_subscription(Float64, '/target_speed', self.target_speed_callback, qos_profile)

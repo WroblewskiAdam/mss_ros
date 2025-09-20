@@ -67,7 +67,7 @@ class SpeedControllerNode(Node):
 
         # --- Subskrypcje ---
         self.create_subscription(Float64, '/target_speed', self.target_speed_callback, default_qos)
-        self.create_subscription(GpsRtk, '/gps_rtk_data_filtered', self.current_speed_callback, default_qos)
+        self.create_subscription(GpsRtk, '/gps_rtk_data/tractor_filtered', self.current_speed_callback, default_qos)
         self.create_subscription(Gear, '/gears', self.gear_callback, default_qos)
 
         # --- Publishery ---

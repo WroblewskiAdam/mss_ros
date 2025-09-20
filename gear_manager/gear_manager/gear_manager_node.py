@@ -64,7 +64,7 @@ class GearManagerNode(Node):
         # Subskrypcja prędkości GPS
         self.speed_subscription = self.create_subscription(
             GpsRtk,
-            '/gps_rtk_data_filtered',
+            '/gps_rtk_data/tractor_filtered',
             self.speed_callback,
             qos_profile
         )

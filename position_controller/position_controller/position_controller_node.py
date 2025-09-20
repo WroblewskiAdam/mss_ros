@@ -71,14 +71,14 @@ class PositionControllerNode(Node):
         
         self.create_subscription(
             GpsRtk, 
-            '/gps_rtk_data_filtered', 
+            '/gps_rtk_data/tractor_filtered', 
             self.tractor_gps_callback, 
             default_qos
         )
         
         self.create_subscription(
             GpsRtk, 
-            '/gps_rtk_data/chopper', 
+            '/gps_rtk_data/chopper_filtered', 
             self.harvester_gps_callback, 
             default_qos
         )

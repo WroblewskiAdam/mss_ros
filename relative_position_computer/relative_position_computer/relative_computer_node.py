@@ -22,8 +22,8 @@ class RelativeComputerNode(Node):
     def __init__(self):
         super().__init__('relative_computer_node')
 
-        self.declare_parameter('tractor_gps_topic', '/gps_rtk_data')
-        self.declare_parameter('chopper_gps_topic', '/gps_rtk_data/chopper')
+        self.declare_parameter('tractor_gps_topic', '/gps_rtk_data/tractor')
+        self.declare_parameter('chopper_gps_topic', '/gps_rtk_data/chopper_filtered')
         self.declare_parameter('distance_metrics_topic', '/distance_metrics')
         self.declare_parameter('earth_radius_m', 6371000.0)
 

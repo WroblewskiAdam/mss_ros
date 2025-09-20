@@ -63,7 +63,7 @@ class GpsMockupNode(Node):
         
         # Publishery
         self.tractor_publisher = self.create_publisher(
-            GpsRtk, '/gps_rtk_data', qos_profile
+            GpsRtk, '/gps_rtk_data/tractor', qos_profile
         )
         self.chopper_publisher = self.create_publisher(
             GpsRtk, '/gps_rtk_data/chopper', qos_profile

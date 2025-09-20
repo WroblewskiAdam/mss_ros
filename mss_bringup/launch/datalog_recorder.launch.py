@@ -9,8 +9,8 @@ def generate_launch_description():
 
     # 1. Lista tematów do nagrania w pliku .bag
     topics_to_record = [
-        '/gps_rtk_data',
-        '/gps_rtk_data_filtered',
+        '/gps_rtk_data/tractor',
+        '/gps_rtk_data/tractor_filtered',
         '/imu/data_raw',
         '/imu/mag',
         '/servo/set_angle',
