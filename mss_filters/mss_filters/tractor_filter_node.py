@@ -9,9 +9,9 @@ import json
 import psutil
 import time
 
-class TractorSpeedFilterNode(Node):
+class TractorFilterNode(Node):
     def __init__(self):
-        super().__init__('tractor_speed_filter_node')
+        super().__init__('tractor_filter_node')
 
         # --- Parametry filtru prędkości ---
         self.declare_parameter('speed_filter_cutoff_hz', 0.8)
@@ -51,7 +51,7 @@ class TractorSpeedFilterNode(Node):
         )
 
         # === Health reporting ===
-        self.health_pub = self.create_publisher(String, '/mss/node_health/tractor_speed_filter_node', 10)
+        self.health_pub = self.create_publisher(String, '/mss/node_health/tractor_filter_node', 10)
         self.health_timer = self.create_timer(5.0, self.publish_health)
 
         # Inicjalizacja filtru Butterworth dla prędkości
@@ -67,7 +67,7 @@ class TractorSpeedFilterNode(Node):
         self.filtered_count = 0
         self.last_filter_time = time.time()
 
-        self.get_logger().info(f"Filtr prędkości i pozycji ciągnika uruchomiony.")
+        self.get_logger().info(f"Filtr ciągnika uruchomiony.")
         self.get_logger().info(f"Parametry filtru prędkości: cutoff={speed_fpass}Hz, order={order}, fs={fs}Hz")
         self.get_logger().info(f"Parametry filtru pozycji: cutoff={position_fpass}Hz, order={order}, fs={fs}Hz")
 
@@ -151,7 +151,7 @@ class TractorSpeedFilterNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = TractorSpeedFilterNode()
+    node = TractorFilterNode()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

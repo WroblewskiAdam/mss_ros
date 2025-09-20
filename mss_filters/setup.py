@@ -20,8 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'tractor_speed_filter_node = mss_filters.tractor_speed_filter_node:main',
-            'chopper_speed_filter_node = mss_filters.chopper_speed_filter_node:main',
+            'tractor_filter_node = mss_filters.tractor_filter_node:main',
+            'chopper_filter_node = mss_filters.chopper_filter_node:main',
         ],
     },
 )

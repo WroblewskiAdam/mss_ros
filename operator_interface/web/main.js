@@ -1311,7 +1311,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateNodeHealthStatus('gear_reader_node', systemData.node_states.gear_reader_node);
                 updateNodeHealthStatus('servo_controller', systemData.node_states.servo_controller);
                 updateNodeHealthStatus('gear_shifter', systemData.node_states.gear_shifter);
-                updateNodeHealthStatus('speed_filter_node', systemData.node_states.speed_filter_node);
+                updateNodeHealthStatus('tractor_filter_node', systemData.node_states.tractor_filter_node);
+                updateNodeHealthStatus('chopper_filter_node', systemData.node_states.chopper_filter_node);
                 updateNodeHealthStatus('speed_controller_node', systemData.node_states.speed_controller_node);
                 updateNodeHealthStatus('relative_computer_node', systemData.node_states.relative_computer_node);
                 updateNodeHealthStatus('gear_manager_node', systemData.node_states.gear_manager_node);
@@ -1413,7 +1414,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'gear_reader_node',
         'servo_controller',
         'gear_shifter',
-        'speed_filter_node',
+        'tractor_filter_node',
+        'chopper_filter_node',
         'speed_controller_node',
         'relative_computer_node',
         'gear_manager_node',

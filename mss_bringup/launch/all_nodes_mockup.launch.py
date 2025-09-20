@@ -79,15 +79,15 @@ def generate_launch_description():
         # === Węzły logiki i sterowania ===
         Node(
             package='mss_filters',
-            executable='tractor_speed_filter_node',
-            name='tractor_speed_filter_node',
+            executable='tractor_filter_node',
+            name='tractor_filter_node',
             output='screen',
             emulate_tty=True,
         ),
         Node(
             package='mss_filters',
-            executable='chopper_speed_filter_node',
-            name='chopper_speed_filter_node',
+            executable='chopper_filter_node',
+            name='chopper_filter_node',
             output='screen',
             emulate_tty=True,
         ),

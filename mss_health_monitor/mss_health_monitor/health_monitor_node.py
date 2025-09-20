@@ -34,7 +34,8 @@ class MSSHealthMonitorNode(Node):
             'gear_mockup_node',         # === NOWY: Węzeł symulacji biegów ===
             'servo_controller',
             'gear_shifter',
-            'speed_filter_node',
+            'tractor_filter_node', # === NOWY: Filtr ciągnika ===
+            'chopper_filter_node', # === NOWY: Filtr sieczkarni ===
             'speed_controller_node',
             'relative_computer_node',
             'gear_manager_node',
@@ -79,8 +80,10 @@ class MSSHealthMonitorNode(Node):
                 self.create_subscription(String, topic_name, self.servo_controller_health_callback, qos_profile)
             elif node_name == 'gear_shifter':
                 self.create_subscription(String, topic_name, self.gear_shifter_health_callback, qos_profile)
-            elif node_name == 'speed_filter_node':
-                self.create_subscription(String, topic_name, self.speed_filter_health_callback, qos_profile)
+            elif node_name == 'tractor_filter_node':
+                self.create_subscription(String, topic_name, self.tractor_filter_health_callback, qos_profile)
+            elif node_name == 'chopper_filter_node':
+                self.create_subscription(String, topic_name, self.chopper_filter_health_callback, qos_profile)
             elif node_name == 'speed_controller_node':
                 self.create_subscription(String, topic_name, self.speed_controller_health_callback, qos_profile)
             elif node_name == 'relative_computer_node':
@@ -148,8 +151,11 @@ class MSSHealthMonitorNode(Node):
     def gear_shifter_health_callback(self, msg):
         self.node_health_callback(msg, 'gear_shifter')
     
-    def speed_filter_health_callback(self, msg):
-        self.node_health_callback(msg, 'speed_filter_node')
+    def tractor_filter_health_callback(self, msg):
+        self.node_health_callback(msg, 'tractor_filter_node')
+    
+    def chopper_filter_health_callback(self, msg):
+        self.node_health_callback(msg, 'chopper_filter_node')
     
     def speed_controller_health_callback(self, msg):
         self.node_health_callback(msg, 'speed_controller_node')
