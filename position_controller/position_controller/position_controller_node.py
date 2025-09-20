@@ -5,6 +5,8 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from std_msgs.msg import Float64, String, Bool
 from std_srvs.srv import SetBool
+from rcl_interfaces.msg import SetParametersResult
+from rcl_interfaces.srv import SetParameters
 from my_robot_interfaces.msg import GpsRtk, DistanceMetrics
 import time
 import math
@@ -54,7 +56,7 @@ class PositionControllerNode(Node):
         
         # --- QoS ---
         default_qos = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=10
         )
@@ -82,9 +84,9 @@ class PositionControllerNode(Node):
         )
         
         # --- Publikacje ---
-        self.target_speed_publisher = self.create_publisher(Float64, '/target_speed', 10)
-        self.status_publisher = self.create_publisher(String, '/autopilot/status', 10)
-        self.health_publisher = self.create_publisher(String, '/position_controller/health', 10)
+        self.target_speed_publisher = self.create_publisher(Float64, '/target_speed', default_qos)
+        self.status_publisher = self.create_publisher(String, '/autopilot/status', default_qos)
+        self.health_publisher = self.create_publisher(String, '/position_controller/health', default_qos)
         
         # --- Serwisy ---
         self.set_enabled_service = self.create_service(
@@ -92,6 +94,16 @@ class PositionControllerNode(Node):
             '/position_controller/set_enabled', 
             self.set_enabled_callback
         )
+        
+        # NOWY SERWIS: Do ręcznego ustawiania parametrów
+        self.set_parameters_service = self.create_service(
+            SetParameters, 
+            'position_controller_node/set_parameters', 
+            self.set_parameters_service_callback
+        )
+        
+        # NOWOŚĆ: Callback do dynamicznej zmiany parametrów
+        self.add_on_set_parameters_callback(self.parameters_callback)
         
         # --- Timery ---
         self.control_timer = self.create_timer(1.0 / self.control_frequency, self.control_loop)
@@ -104,6 +116,78 @@ class PositionControllerNode(Node):
         self.get_logger().info(f"Tolerancja prędkości: ±{self.speed_tolerance} m/s")
         self.get_logger().info(f"Nastawy PI: Kp={self.Kp}, Ki={self.Ki}")
         self.get_logger().info(f"Autopilot domyślnie WYŁĄCZONY")
+
+    def update_parameter_and_variable(self, param_name, value, variable_name):
+        """Aktualizuje zmienną wewnętrzną."""
+        try:
+            # Aktualizuj zmienną wewnętrzną
+            setattr(self, variable_name, value)
+            self.get_logger().info(f"Zaktualizowano {param_name} na: {value}")
+            return True
+        except Exception as e:
+            self.get_logger().error(f"Błąd podczas aktualizacji {param_name}: {e}")
+            return False
+
+    def parameters_callback(self, params):
+        """Ten callback jest automatycznie wywoływany, gdy ktoś zmieni parametry węzła."""
+        for param in params:
+            if param.name == "Kp":
+                self.update_parameter_and_variable('Kp', param.value, 'Kp')
+            elif param.name == "Ki":
+                self.update_parameter_and_variable('Ki', param.value, 'Ki')
+            elif param.name == "position_tolerance":
+                self.update_parameter_and_variable('position_tolerance', param.value, 'position_tolerance')
+            elif param.name == "speed_tolerance":
+                self.update_parameter_and_variable('speed_tolerance', param.value, 'speed_tolerance')
+        return SetParametersResult(successful=True)
+
+    def set_parameters_service_callback(self, request, response):
+        """Serwis do ustawiania parametrów regulatora pozycji."""
+        try:
+            success_count = 0
+            total_params = len(request.parameters)
+            
+            for param in request.parameters:
+                param_name = param.name
+                param_value = param.value.double_value
+                
+                if param_name == 'Kp':
+                    if self.update_parameter_and_variable('Kp', param_value, 'Kp'):
+                        success_count += 1
+                elif param_name == 'Ki':
+                    if self.update_parameter_and_variable('Ki', param_value, 'Ki'):
+                        success_count += 1
+                elif param_name == 'position_tolerance':
+                    if self.update_parameter_and_variable('position_tolerance', param_value, 'position_tolerance'):
+                        success_count += 1
+                elif param_name == 'speed_tolerance':
+                    if self.update_parameter_and_variable('speed_tolerance', param_value, 'speed_tolerance'):
+                        success_count += 1
+                else:
+                    self.get_logger().warn(f"Nieznany parametr: {param_name}")
+            
+            # Przygotuj odpowiedź
+            response.results = []
+            for param in request.parameters:
+                result = SetParametersResult()
+                result.successful = param.name in ['Kp', 'Ki', 'position_tolerance', 'speed_tolerance'] and success_count > 0
+                response.results.append(result)
+            
+            if success_count == total_params:
+                self.get_logger().info(f"Wszystkie parametry zaktualizowane pomyślnie: Kp={self.Kp}, Ki={self.Ki}, position_tolerance={self.position_tolerance}, speed_tolerance={self.speed_tolerance}")
+            else:
+                self.get_logger().warn(f"Zaktualizowano {success_count}/{total_params} parametrów")
+                
+            return response
+            
+        except Exception as e:
+            self.get_logger().error(f"Błąd w serwisie ustawiania parametrów: {e}")
+            response.results = []
+            for param in request.parameters:
+                result = SetParametersResult()
+                result.successful = False
+                response.results.append(result)
+            return response
 
     def distance_callback(self, msg):
         """Odbiera dane o odległościach względnych."""

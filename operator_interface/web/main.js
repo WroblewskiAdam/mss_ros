@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { name: 'Kp', value: { type: 2, double_value: parseFloat(positionKpSlider.value) } },
                 { name: 'Ki', value: { type: 2, double_value: parseFloat(positionKiSlider.value) } },
                 { name: 'position_tolerance', value: { type: 2, double_value: parseFloat(positionToleranceSlider.value) } },
-                { name: 'speed_tolerance', value: { type: 2, double_value: parseFloat(speedToleranceSlider.value) } }
+                { name: 'speed_tolerance', value: { type: 2, double_value: parseFloat(speedToleranceSlider.value) / 3.6 } } // km/h -> m/s
             ];
             const request = new ROSLIB.ServiceRequest({ parameters: params });
             setPositionParamsClient.callService(request, (result) => {
