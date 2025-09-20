@@ -83,6 +83,14 @@ class PositionControllerNode(Node):
             default_qos
         )
         
+        # Subskrypcja pozycji zadanej z web interface
+        self.create_subscription(
+            Float64, 
+            '/target_position', 
+            self.target_position_callback, 
+            default_qos
+        )
+        
         # --- Publikacje ---
         self.target_speed_publisher = self.create_publisher(Float64, '/target_speed', default_qos)
         self.status_publisher = self.create_publisher(String, '/autopilot/status', default_qos)
@@ -139,6 +147,8 @@ class PositionControllerNode(Node):
                 self.update_parameter_and_variable('position_tolerance', param.value, 'position_tolerance')
             elif param.name == "speed_tolerance":
                 self.update_parameter_and_variable('speed_tolerance', param.value, 'speed_tolerance')
+            elif param.name == "target_distance":
+                self.update_parameter_and_variable('target_distance', param.value, 'target_distance')
         return SetParametersResult(successful=True)
 
     def set_parameters_service_callback(self, request, response):
@@ -163,6 +173,9 @@ class PositionControllerNode(Node):
                 elif param_name == 'speed_tolerance':
                     if self.update_parameter_and_variable('speed_tolerance', param_value, 'speed_tolerance'):
                         success_count += 1
+                elif param_name == 'target_distance':
+                    if self.update_parameter_and_variable('target_distance', param_value, 'target_distance'):
+                        success_count += 1
                 else:
                     self.get_logger().warn(f"Nieznany parametr: {param_name}")
             
@@ -170,11 +183,11 @@ class PositionControllerNode(Node):
             response.results = []
             for param in request.parameters:
                 result = SetParametersResult()
-                result.successful = param.name in ['Kp', 'Ki', 'position_tolerance', 'speed_tolerance'] and success_count > 0
+                result.successful = param.name in ['Kp', 'Ki', 'position_tolerance', 'speed_tolerance', 'target_distance'] and success_count > 0
                 response.results.append(result)
             
             if success_count == total_params:
-                self.get_logger().info(f"Wszystkie parametry zaktualizowane pomyślnie: Kp={self.Kp}, Ki={self.Ki}, position_tolerance={self.position_tolerance}, speed_tolerance={self.speed_tolerance}")
+                self.get_logger().info(f"Wszystkie parametry zaktualizowane pomyślnie: Kp={self.Kp}, Ki={self.Ki}, position_tolerance={self.position_tolerance}, speed_tolerance={self.speed_tolerance}, target_distance={self.target_distance}")
             else:
                 self.get_logger().warn(f"Zaktualizowano {success_count}/{total_params} parametrów")
                 
@@ -212,6 +225,11 @@ class PositionControllerNode(Node):
         
         if self.is_enabled:
             self.get_logger().debug(f"Prędkość sieczkarni: {self.harvester_speed:.2f} m/s")
+
+    def target_position_callback(self, msg):
+        """Odbiera pozycję zadaną z web interface."""
+        self.target_distance = msg.data
+        self.get_logger().info(f"Otrzymano nową pozycję zadaną: {self.target_distance} m")
 
     def set_enabled_callback(self, request, response):
         """Serwis do włączania/wyłączania autopilota."""

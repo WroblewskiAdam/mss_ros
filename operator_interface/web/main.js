@@ -298,6 +298,22 @@ document.addEventListener('DOMContentLoaded', () => {
         window.lastTargetSpeed = message.data;
     });
 
+    // --- Subskrypcja pozycji zadanej przez regulator pozycji ---
+    const targetPositionListener = new ROSLIB.Topic({
+        ros: ros,
+        name: '/target_position',
+        messageType: 'std_msgs/msg/Float64'
+    });
+
+    targetPositionListener.subscribe((message) => {
+        window.lastTargetPosition = message.data;
+        // Aktualizuj pole input z pozycją zadaną
+        const targetPositionInput = document.getElementById('target-position-regulator');
+        if (targetPositionInput) {
+            targetPositionInput.value = message.data.toFixed(1);
+        }
+    });
+
     const rtkStatusMap = { 0: 'BRAK', 1: 'SPS', 2: 'DGPS', 4: 'FIX', 5: 'FLOAT', 255: 'TIMEOUT' };
     const clutchStatusMap = { 0: 'Zwolnione', 1: 'WCIŚNIĘTE', 255: 'TIMEOUT' };
 
@@ -1243,26 +1259,21 @@ document.addEventListener('DOMContentLoaded', () => {
         setPositionBtn.onclick = () => {
             const targetPosition = parseFloat(targetPositionInput.value);
             if (!isNaN(targetPosition)) {
-                // Ustawienie pozycji zadanej przez serwis
-                const request = new ROSLIB.ServiceRequest({
-                    parameters: [{
-                        name: 'target_distance',
-                        value: {
-                            type: 'double',
-                            double_value: targetPosition
-                        }
-                    }]
+                // Publikuj bezpośrednio na topik /target_position (tak jak prędkość)
+                const positionMsg = new ROSLIB.Message({
+                    data: targetPosition
                 });
                 
-                setPositionParamsClient.callService(request, (result) => {
-                    if (result.successful) {
-                        window.lastTargetPosition = targetPosition;
-                        showNotification(`Ustawiono pozycję zadaną: ${targetPosition} m`, 'success');
-                        updateLastCommand(`Ustawiono pozycję zadaną: ${targetPosition} m`);
-                    } else {
-                        showNotification('Błąd ustawiania pozycji zadanej', 'error');
-                    }
+                const positionPublisher = new ROSLIB.Topic({
+                    ros: ros,
+                    name: '/target_position',
+                    messageType: 'std_msgs/msg/Float64'
                 });
+                
+                positionPublisher.publish(positionMsg);
+                window.lastTargetPosition = targetPosition;
+                showNotification(`Pozycja zadana ustawiona na ${targetPosition} m`, 'success');
+                updateLastCommand(`Ustaw pozycję: ${targetPosition} m`);
             } else {
                 showNotification('Nieprawidłowa wartość pozycji', 'error');
             }
