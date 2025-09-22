@@ -1772,6 +1772,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (indicatorElement) {
                 indicatorElement.className = `node-health-indicator ${status}`;
             }
+
+            // Usunięto specjalną obsługę filtrów - karty są ujednolicone w index.html
             
             // Aktualizacja konsoli logów tylko jeśli mamy pełne dane
             if (healthData && typeof healthData === 'object') {
