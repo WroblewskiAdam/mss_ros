@@ -85,6 +85,70 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicjalizacja rozmiarów na starcie
     initializeIconSizes();
 
+    // --- NOWA FUNKCJA: Aktualizacja slajderów z rzeczywistymi parametrami ---
+    function updateSlidersFromParameters() {
+        // Pobierz parametry regulatora pozycji
+        const positionParamsRequest = new ROSLIB.ServiceRequest({
+            names: ['Kp', 'Ki', 'position_tolerance', 'speed_tolerance']
+        });
+        
+        getPositionParamsClient.callService(positionParamsRequest, (result) => {
+            if (result.values && result.values.length >= 4) {
+                // Aktualizuj slajdery regulatora pozycji
+                if (positionKpSlider) {
+                    positionKpSlider.value = result.values[0].double_value;
+                    positionKpValueSpan.textContent = result.values[0].double_value.toFixed(1);
+                }
+                
+                if (positionKiSlider) {
+                    positionKiSlider.value = result.values[1].double_value;
+                    positionKiValueSpan.textContent = result.values[1].double_value.toFixed(2);
+                }
+                
+                if (positionToleranceSlider) {
+                    positionToleranceSlider.value = result.values[2].double_value;
+                    positionToleranceValueSpan.textContent = result.values[2].double_value.toFixed(1);
+                }
+                
+                if (speedToleranceSlider) {
+                    // Konwersja z m/s na km/h
+                    const speedToleranceKmh = result.values[3].double_value * 3.6;
+                    speedToleranceSlider.value = speedToleranceKmh;
+                    speedToleranceValueSpan.textContent = speedToleranceKmh.toFixed(1);
+                }
+                
+                console.log('Slajdery regulatora pozycji zaktualizowane z rzeczywistymi parametrami');
+            }
+        });
+        
+        // Pobierz parametry regulatora prędkości
+        const speedParamsRequest = new ROSLIB.ServiceRequest({
+            names: ['kp', 'ki', 'kd']
+        });
+        
+        getSpeedParamsClient.callService(speedParamsRequest, (result) => {
+            if (result.values && result.values.length >= 3) {
+                // Aktualizuj slajdery regulatora prędkości
+                if (kpSlider) {
+                    kpSlider.value = result.values[0].double_value;
+                    kpValueSpan.textContent = result.values[0].double_value.toFixed(1);
+                }
+                
+                if (kiSlider) {
+                    kiSlider.value = result.values[1].double_value;
+                    kiValueSpan.textContent = result.values[1].double_value.toFixed(1);
+                }
+                
+                if (kdSlider) {
+                    kdSlider.value = result.values[2].double_value;
+                    kdValueSpan.textContent = result.values[2].double_value.toFixed(1);
+                }
+                
+                console.log('Slajdery regulatora prędkości zaktualizowane z rzeczywistymi parametrami');
+            }
+        });
+    }
+
     // --- Inicjalizacja wykresu ---
     const ctx = document.getElementById('controller-chart').getContext('2d');
     const controllerChart = new Chart(ctx, {
@@ -539,6 +603,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setParamsClient.callService(request, (result) => {
             if (result.results.every(r => r.successful)) {
                 showNotification('Parametry zaktualizowane!', 'success');
+                // NOWA FUNKCJA: Aktualizuj slajdery po zastosowaniu parametrów
+                setTimeout(() => {
+                    updateSlidersFromParameters();
+                }, 500);
             } else {
                 showNotification('Błąd podczas aktualizacji parametrów.', 'error');
             }
@@ -556,6 +624,20 @@ document.addEventListener('DOMContentLoaded', () => {
         serviceType: 'rcl_interfaces/srv/SetParameters'
     });
 
+    // --- Serwis do pobierania parametrów regulatora pozycji ---
+    const getPositionParamsClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/position_controller_node/get_parameters',
+        serviceType: 'rcl_interfaces/srv/GetParameters'
+    });
+
+    // --- Serwis do pobierania parametrów regulatora prędkości ---
+    const getSpeedParamsClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/speed_controller_node/get_parameters',
+        serviceType: 'rcl_interfaces/srv/GetParameters'
+    });
+
     const applyPositionPidBtn = document.getElementById('apply-position-pid-btn');
     if (applyPositionPidBtn) {
         applyPositionPidBtn.onclick = () => {
@@ -569,6 +651,10 @@ document.addEventListener('DOMContentLoaded', () => {
             setPositionParamsClient.callService(request, (result) => {
                 if (result.results.every(r => r.successful)) {
                     showNotification('Parametry regulatora pozycji zaktualizowane!', 'success');
+                    // NOWA FUNKCJA: Aktualizuj slajdery po zastosowaniu parametrów
+                    setTimeout(() => {
+                        updateSlidersFromParameters();
+                    }, 500);
                 } else {
                     showNotification('Błąd aktualizacji parametrów regulatora pozycji!', 'error');
                 }
@@ -590,6 +676,11 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionStatusDiv.className = 'status-indicator status-on';
         toggleAutopilotBtn.disabled = false;
         showNotification('Połączono z ROS Bridge', 'success');
+        
+        // NOWA FUNKCJA: Aktualizuj slajdery z rzeczywistymi parametrami po połączeniu
+        setTimeout(() => {
+            updateSlidersFromParameters();
+        }, 1000); // Opóźnienie 1s aby węzły się uruchomiły
     });
     
     ros.on('error', () => {
