@@ -629,41 +629,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
     toggleAutopilotBtn.onclick = () => {
         const targetState = !isAutopilotOn;
-        const request = new ROSLIB.ServiceRequest({ data: targetState });
-        setAutopilotClient.callService(request, (result) => {
-            if (result.success) {
-                isAutopilotOn = targetState;
-                
-                // NOWA LOGIKA: Główny autopilot automatycznie włącza regulator prędkości
-                if (isAutopilotOn) {
-                    // Autopilot włączony - automatycznie włącz regulator prędkości
-                    isSpeedControllerEnabled = true;
-                    
-                    // Aktualizuj UI regulatora prędkości
-                    if (toggleSpeedControllerBtn) {
-                        toggleSpeedControllerBtn.textContent = 'WŁĄCZONA';
-                        toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-on';
-                    }
-                    
-                    showNotification('Autopilot aktywowany - regulator prędkości automatycznie włączony', 'success');
+        
+        // NOWA LOGIKA: Główny autopilot włącza/wyłącza oba regulatory
+        if (targetState) {
+            // Włączanie autopilota - włącz oba regulatory
+            const positionRequest = new ROSLIB.ServiceRequest({ data: true });
+            const speedRequest = new ROSLIB.ServiceRequest({ data: true });
+            
+            // Najpierw włącz regulator pozycji
+            setPositionControllerClient.callService(positionRequest, (positionResult) => {
+                if (positionResult.success) {
+                    // Następnie włącz regulator prędkości
+                    setSpeedControllerClient.callService(speedRequest, (speedResult) => {
+                        if (speedResult.success) {
+                            isAutopilotOn = true;
+                            isSpeedControllerEnabled = true;
+                            isPositionControllerEnabled = true;
+                            
+                            showNotification('Autopilot aktywowany - oba regulatory włączone', 'success');
+                            updateAutopilotUI();
+                        } else {
+                            showNotification('Błąd włączenia regulatora prędkości!', 'error');
+                        }
+                    });
                 } else {
-                    // Autopilot wyłączony - wyłącz wszystkie regulatory
-                    isSpeedControllerEnabled = false;
-                    
-                    // Aktualizuj UI regulatora prędkości
-                    if (toggleSpeedControllerBtn) {
-                        toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
-                        toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
-                    }
-                    
-                    showNotification('Autopilot dezaktywowany - wszystkie regulatory wyłączone', 'warning');
+                    showNotification('Błąd włączenia regulatora pozycji!', 'error');
                 }
-                
-                updateAutopilotUI();
-            } else {
-                showNotification("Nie udało się zmienić stanu autopilota!", 'error');
-            }
-        });
+            });
+        } else {
+            // Wyłączanie autopilota - wyłącz oba regulatory
+            const positionRequest = new ROSLIB.ServiceRequest({ data: false });
+            const speedRequest = new ROSLIB.ServiceRequest({ data: false });
+            
+            // Najpierw wyłącz regulator pozycji
+            setPositionControllerClient.callService(positionRequest, (positionResult) => {
+                if (positionResult.success) {
+                    // Następnie wyłącz regulator prędkości
+                    setSpeedControllerClient.callService(speedRequest, (speedResult) => {
+                        if (speedResult.success) {
+                            isAutopilotOn = false;
+                            isSpeedControllerEnabled = false;
+                            isPositionControllerEnabled = false;
+                            
+                            showNotification('Autopilot dezaktywowany - oba regulatory wyłączone', 'warning');
+                            updateAutopilotUI();
+                        } else {
+                            showNotification('Błąd wyłączenia regulatora prędkości!', 'error');
+                        }
+                    });
+                } else {
+                    showNotification('Błąd wyłączenia regulatora pozycji!', 'error');
+                }
+            });
+        }
     };
 
     function updateAutopilotUI() {
@@ -679,9 +697,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggleSpeedControllerBtn.title = 'Autopilot aktywny - użyj głównego przycisku do wyłączenia';
             }
             
-            // NOWA: Aktualizuj diodę LED - regulator włączony przez autopilot
+            // NOWA: Przycisk regulatora pozycji jest zablokowany gdy autopilot aktywny
+            if (togglePositionControllerBtn) {
+                togglePositionControllerBtn.className = 'btn-toggle btn-toggle-disabled';
+                togglePositionControllerBtn.title = 'Autopilot aktywny - użyj głównego przycisku do wyłączenia';
+            }
+            
+            // NOWA: Aktualizuj diody LED - regulatory włączone przez autopilot
             if (speedControllerLed) {
                 speedControllerLed.className = 'status-led on';
+            }
+            if (positionControllerLed) {
+                positionControllerLed.className = 'status-led on';
             }
         } else {
             autopilotStatusDiv.className = 'status-indicator status-off';
@@ -689,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleAutopilotBtn.className = 'btn-engage';
             toggleAutopilotBtn.textContent = 'AKTYWUJ';
             
-            // NOWA: Przycisk regulatora prędkości jest aktywny gdy autopilot wyłączony
+            // NOWA: Przyciski regulatorów są aktywne gdy autopilot wyłączony
             if (toggleSpeedControllerBtn) {
                 // Przywróć normalny wygląd przycisku
                 if (isSpeedControllerEnabled) {
@@ -700,9 +727,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggleSpeedControllerBtn.title = '';
             }
             
-            // NOWA: Aktualizuj diodę LED - regulator wyłączony przez autopilot
+            if (togglePositionControllerBtn) {
+                // Przywróć normalny wygląd przycisku
+                if (isPositionControllerEnabled) {
+                    togglePositionControllerBtn.className = 'btn-toggle btn-toggle-on';
+                } else {
+                    togglePositionControllerBtn.className = 'btn-toggle btn-toggle-off';
+                }
+                togglePositionControllerBtn.title = '';
+            }
+            
+            // NOWA: Aktualizuj diody LED - regulatory wyłączone przez autopilot
             if (speedControllerLed) {
                 speedControllerLed.className = 'status-led off';
+            }
+            if (positionControllerLed) {
+                positionControllerLed.className = 'status-led off';
             }
         }
     }
@@ -1055,11 +1095,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Aktualizacja statusu regulatora na podstawie danych diagnostycznych
     diagnosticsListener.subscribe((message) => {
-        // Aktualizacja statusu regulatora
-        if (message.target_speed.data !== PLACEHOLDER_FLOAT) {
-            speedControllerLed.className = 'status-led on';
-        } else {
-            speedControllerLed.className = 'status-led off';
+        // NAPRAWA: Lampka regulatora prędkości reaguje na rzeczywisty stan regulatora
+        // zamiast na obecność danych target_speed
+        if (speedControllerLed) {
+            if (isSpeedControllerEnabled) {
+                speedControllerLed.className = 'status-led on';
+            } else {
+                speedControllerLed.className = 'status-led off';
+            }
         }
 
         // Status gear manager będzie aktualizowany przez subskrypcję health
@@ -1105,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // NOWA: Inicjalizacja UI regulatora prędkości
     if (toggleSpeedControllerBtn) {
-        toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
+        toggleSpeedControllerBtn.textContent = 'WYŁĄCZONY';
         toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
     }
     
@@ -1128,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isSpeedControllerEnabled = false;
             
             if (toggleSpeedControllerBtn) {
-                toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
+                toggleSpeedControllerBtn.textContent = 'WYŁĄCZONY';
                 toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
             }
             
@@ -1155,7 +1198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     isSpeedControllerEnabled = targetState;
                     
                     if (isSpeedControllerEnabled) {
-                        toggleSpeedControllerBtn.textContent = 'WŁĄCZONA';
+                        toggleSpeedControllerBtn.textContent = 'WŁĄCZONY';
                         toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-on';
                         showNotification('Regulacja prędkości włączona', 'success');
                         updateLastCommand('Włączono regulację prędkości');
@@ -1165,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             speedControllerLed.className = 'status-led on';
                         }
                     } else {
-                        toggleSpeedControllerBtn.textContent = 'WYŁĄCZONA';
+                        toggleSpeedControllerBtn.textContent = 'WYŁĄCZONY';
                         toggleSpeedControllerBtn.className = 'btn-toggle btn-toggle-off';
                         showNotification('Regulacja prędkości wyłączona', 'warning');
                         updateLastCommand('Wyłączono regulację prędkości');
@@ -1217,40 +1260,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- Logika przełącznika regulatora pozycji ---
+    // --- Logika przełącznika regulatora pozycji - SYNCHRONIZACJA Z GŁÓWNYM PRZYCISKIEM ---
     if (togglePositionControllerBtn) {
         togglePositionControllerBtn.onclick = () => {
-            const targetState = !isPositionControllerEnabled;
-            const request = new ROSLIB.ServiceRequest({ data: targetState });
+            // NOWA LOGIKA: Przycisk regulatora pozycji pełni tę samą funkcję co główny przycisk autopilota
+            const targetState = !isAutopilotOn;
             
-            setPositionControllerClient.callService(request, (result) => {
-                if (result.success) {
-                    isPositionControllerEnabled = targetState;
-                    
-                    if (isPositionControllerEnabled) {
-                        togglePositionControllerBtn.textContent = 'WŁĄCZONY';
-                        togglePositionControllerBtn.className = 'btn-toggle btn-toggle-on';
-                        showNotification('Autopilot pozycji włączony', 'success');
-                        updateLastCommand('Włączono autopilot pozycji');
-                        
-                        if (positionControllerLed) {
-                            positionControllerLed.className = 'status-led on';
-                        }
+            if (targetState) {
+                // Włączanie autopilota - włącz oba regulatory
+                const positionRequest = new ROSLIB.ServiceRequest({ data: true });
+                const speedRequest = new ROSLIB.ServiceRequest({ data: true });
+                
+                // Najpierw włącz regulator pozycji
+                setPositionControllerClient.callService(positionRequest, (positionResult) => {
+                    if (positionResult.success) {
+                        // Następnie włącz regulator prędkości
+                        setSpeedControllerClient.callService(speedRequest, (speedResult) => {
+                            if (speedResult.success) {
+                                isAutopilotOn = true;
+                                isSpeedControllerEnabled = true;
+                                isPositionControllerEnabled = true;
+                                
+                                showNotification('Autopilot aktywowany - oba regulatory włączone', 'success');
+                                updateAutopilotUI();
+                            } else {
+                                showNotification('Błąd włączenia regulatora prędkości!', 'error');
+                            }
+                        });
                     } else {
-                        togglePositionControllerBtn.textContent = 'WYŁĄCZONY';
-                        togglePositionControllerBtn.className = 'btn-toggle btn-toggle-off';
-                        showNotification('Autopilot pozycji wyłączony', 'info');
-                        updateLastCommand('Wyłączono autopilot pozycji');
-                        
-                        if (positionControllerLed) {
-                            positionControllerLed.className = 'status-led off';
-                        }
+                        showNotification('Błąd włączenia regulatora pozycji!', 'error');
                     }
-                } else {
-                    showNotification('Błąd zmiany stanu autopilota pozycji', 'error');
-                    updateLastCommand('Błąd zmiany stanu autopilota pozycji');
-                }
-            });
+                });
+            } else {
+                // Wyłączanie autopilota - wyłącz oba regulatory
+                const positionRequest = new ROSLIB.ServiceRequest({ data: false });
+                const speedRequest = new ROSLIB.ServiceRequest({ data: false });
+                
+                // Najpierw wyłącz regulator pozycji
+                setPositionControllerClient.callService(positionRequest, (positionResult) => {
+                    if (positionResult.success) {
+                        // Następnie wyłącz regulator prędkości
+                        setSpeedControllerClient.callService(speedRequest, (speedResult) => {
+                            if (speedResult.success) {
+                                isAutopilotOn = false;
+                                isSpeedControllerEnabled = false;
+                                isPositionControllerEnabled = false;
+                                
+                                showNotification('Autopilot dezaktywowany - oba regulatory wyłączone', 'warning');
+                                updateAutopilotUI();
+                            } else {
+                                showNotification('Błąd wyłączenia regulatora prędkości!', 'error');
+                            }
+                        });
+                    } else {
+                        showNotification('Błąd wyłączenia regulatora pozycji!', 'error');
+                    }
+                });
+            }
         };
     }
 

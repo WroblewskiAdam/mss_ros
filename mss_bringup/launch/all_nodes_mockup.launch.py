@@ -106,8 +106,8 @@ def generate_launch_description():
             emulate_tty=True,
             parameters=[{
                 'target_distance': 0.0,
-                'position_tolerance': 0.5,
-                'speed_tolerance': 0.28,
+                'position_tolerance': 1.0,
+                'speed_tolerance': 0.41,
                 'Kp': 1.0,
                 'Ki': 0.1,
                 'min_speed': 0.5,

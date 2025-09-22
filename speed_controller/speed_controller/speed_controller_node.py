@@ -162,7 +162,7 @@ class SpeedControllerNode(Node):
     def set_enabled_callback(self, request, response):
         self.autopilot_enabled = request.data
         if self.autopilot_enabled:
-            self.get_logger().warn("AUTOPILOT AKTYWOWANY.")
+            self.get_logger().info("REGULATOR PRĘDKOŚCI WŁĄCZONY.")
             
             # --- FEEDFORWARD: Inicjalizacja integratora na podstawie wielomianu 3. stopnia ---
             # Zamiast resetować integrator na 0, ustawiamy go na wartość z charakterystyki statycznej
@@ -173,7 +173,7 @@ class SpeedControllerNode(Node):
             
             self.get_logger().info(f"Integrator zainicjalizowany wartością: {integrator_init_value:.1f}° (na podstawie aktualnej prędkości: {self.current_speed_mps:.2f}m/s)")
         else:
-            self.get_logger().warn("AUTOPILOT DEZAKTYWOWANY.")
+            self.get_logger().info("REGULATOR PRĘDKOŚCI WYŁĄCZONY.")
             self.integral_sum = 0.0  # Reset integratora przy wyłączaniu
             self.set_servo_to_zero_and_wait()
         response.success = True

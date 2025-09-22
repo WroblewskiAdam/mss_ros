@@ -68,11 +68,17 @@ class DataLoggerNode(Node):
             
         # --- NOWOŚĆ: Subskrypcje dla logowania regulatora prędkości ---
         # Subskrypcja dla prędkości zadanej (tylko przechowuje wartość)
+        # NAPRAWA QoS: Używamy RELIABLE zamiast BEST_EFFORT dla zgodności z position_controller
+        target_speed_qos = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=10
+        )
         self.target_speed_subscription = self.create_subscription(
             Float64,
             '/target_speed',
             self.target_speed_callback,
-            qos_profile=sensor_qos_profile)
+            qos_profile=target_speed_qos)
 
         # Subskrypcja dla filtrowanej prędkości (główny wyzwalacz zapisu)
         self.filtered_speed_subscription = self.create_subscription(

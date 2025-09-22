@@ -35,6 +35,9 @@ class DiagnosticsNode(Node):
 
         # --- QoS ---
         qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=10)
+        
+        # NAPRAWA QoS: Specjalny QoS dla /target_speed - RELIABLE dla zgodności z position_controller
+        target_speed_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST, depth=10)
 
         # --- Publisher ---
         self.diag_publisher = self.create_publisher(DiagnosticData, '/diagnostics', 10)
@@ -44,7 +47,7 @@ class DiagnosticsNode(Node):
         self.create_subscription(GpsRtk, '/gps_rtk_data/chopper_filtered', self.chopper_gps_callback, qos_profile)
         self.create_subscription(StampedInt32, '/servo/position', self.servo_pos_callback, qos_profile)
         self.create_subscription(Gear, '/gears', self.gear_callback, qos_profile)
-        self.create_subscription(Float64, '/target_speed', self.target_speed_callback, qos_profile)
+        self.create_subscription(Float64, '/target_speed', self.target_speed_callback, target_speed_qos)  # NAPRAWA: Używamy target_speed_qos
         self.create_subscription(DistanceMetrics, '/distance_metrics', self.relative_pos_callback, qos_profile)
 
         # --- Główna pętla (Timer) ---

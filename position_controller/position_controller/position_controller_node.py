@@ -17,8 +17,8 @@ class PositionControllerNode(Node):
         
         # --- Parametry konfiguracyjne ---
         self.declare_parameter('target_distance', 0.0)  # m - docelowa odległość wzdłużna
-        self.declare_parameter('position_tolerance', 0.5)  # m - tolerancja pozycji
-        self.declare_parameter('speed_tolerance', 0.28)  # m/s - tolerancja prędkości (1 km/h)
+        self.declare_parameter('position_tolerance', 1.0)  # m - tolerancja pozycji
+        self.declare_parameter('speed_tolerance', 0.41)  # m/s - tolerancja prędkości (1 km/h)
         self.declare_parameter('Kp', 1.0)  # wzmocnienie proporcjonalne
         self.declare_parameter('Ki', 0.1)  # wzmocnienie całkujące
         self.declare_parameter('min_speed', 0.5)  # m/s - minimalna prędkość
@@ -385,19 +385,16 @@ class PositionControllerNode(Node):
         speed_msg.data = target_speed
         self.target_speed_publisher.publish(speed_msg)
         
-        # Publikuj status
-        self.publish_status("AKTYWNY", f"Błąd: {position_error:.2f}m, Prędkość: {target_speed:.2f}m/s")
-        
-        # Szczegółowe logowanie diagnostyczne
-        self.get_logger().info(
-            f"REGULACJA POZYCJI: "
-            f"Błąd={position_error:.3f}m, "
+        # Publikuj status z szczegółowymi danymi regulacji
+        detailed_status = (
+            f"AKTYWNY: Błąd={position_error:.3f}m, "
             f"P={pi_result['p_term']:.3f}m/s, "
             f"I={pi_result['i_term']:.3f}m/s, "
             f"Integral={pi_result['integral_error']:.3f}, "
             f"Korekta={speed_correction:.3f}m/s, "
             f"Cel={target_speed:.3f}m/s"
         )
+        self.publish_status("AKTYWNY", detailed_status)
 
     def publish_status(self, status, message):
         """Publikuje status autopilota."""
