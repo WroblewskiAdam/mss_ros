@@ -15,8 +15,9 @@ class GearManagerNode(Node):
         
         # --- Parametry ---
         self.declare_parameter('powershift_max_speeds_kmh', [8.4, 13.0, 16.8, 25.2])  # km/h
-        self.declare_parameter('upshift_speeds_kmh', [7.5, 12.0, 15.5, 24.0])  # km/h - progi upshift
-        self.declare_parameter('downshift_speeds_kmh', [-6.0, 10.0, 13.5, 20.0])  # km/h - progi downshift
+        # NOWE PROGI Z HISTEREZĄ - na podstawie doświadczeń użytkownika (histereza 1.5 km/h)
+        self.declare_parameter('upshift_speeds_kmh', [10.0, 13.0, 16.0, 34.0])  # km/h - progi upshift z histerezą
+        self.declare_parameter('downshift_speeds_kmh', [8.5, 11.5, 14.5, 18.0])  # km/h - progi downshift z histerezą
         self.declare_parameter('shift_cooldown_sec', 2.0)
         self.declare_parameter('max_powershift', 4)
         
@@ -86,10 +87,16 @@ class GearManagerNode(Node):
         # --- Logowanie ---
         self.get_logger().info("=== GEAR MANAGER NODE STARTED ===")
         # self.get_logger().info(f"Maksymalne prędkości półbiegów: {powershift_max_speeds_kmh} km/h")
-        self.get_logger().info(f"Progi upshift: {upshift_speeds_kmh} km/h")
-        self.get_logger().info(f"Progi downshift: {downshift_speeds_kmh} km/h")
+        self.get_logger().info(f"Progi upshift (z histerezą): {upshift_speeds_kmh} km/h")
+        self.get_logger().info(f"Progi downshift (z histerezą): {downshift_speeds_kmh} km/h")
         self.get_logger().info(f"Cooldown: {self.shift_cooldown}s")
         self.get_logger().info("Oczekiwanie na odczyt aktualnego półbiegu z topiku /gears...")
+        
+        # Logowanie szczegółów histerezy
+        self.get_logger().info("=== HISTEREZA BIEGÓW ===")
+        self.get_logger().info("1→2: 10.0 km/h | 2→1: 8.5 km/h (histereza: 1.5 km/h)")
+        self.get_logger().info("2→3: 13.0 km/h | 3→2: 11.5 km/h (histereza: 1.5 km/h)")
+        self.get_logger().info("3→4: 16.0 km/h | 4→3: 18.0 km/h (histereza: 2.0 km/h)")
 
     def gear_callback(self, msg):
         """Odbiera stan biegu (półbiegu) i sprzęgła."""
@@ -198,6 +205,12 @@ class GearManagerNode(Node):
         # --- LOGIKA ZMIANY BIEGU W DÓŁ ---
         if self.current_powershift > 1:
             downshift_speed_trigger = self.downshift_speeds[current_gear_index]
+            
+            # DEBUG: Loguj szczegóły dla biegu 4
+            if self.current_powershift == 4:
+                current_kmh = self.current_speed * 3.6
+                trigger_kmh = downshift_speed_trigger * 3.6
+                self.get_logger().info(f"DEBUG BIEG 4: prędkość={current_kmh:.1f} km/h, próg downshift={trigger_kmh:.1f} km/h, warunek={current_kmh < trigger_kmh}")
             
             if self.current_speed < downshift_speed_trigger:
                 current_kmh = self.current_speed * 3.6
