@@ -1278,13 +1278,76 @@ button:disabled {
     border-radius: var(--radius-md);
     border: 1px solid var(--border-light);
     font-weight: 700;
-    font-size: 1.25rem;
+    font-size: 1rem;
     text-align: center;
-    color: var(--primary-color);
+    color: white;
     min-height: 3rem;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.gear-thresholds {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    padding: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.threshold-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.threshold-row:last-child {
+    border-bottom: none;
+}
+
+.threshold-gear {
+    color: white;
+    font-weight: 600;
+    min-width: 60px;
+}
+
+.threshold-values {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.threshold-down {
+    color: #ef4444;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.threshold-up {
+    color: #10b981;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.threshold-separator {
+    color: var(--text-secondary);
+    font-weight: 400;
+    font-size: 0.8rem;
+}
+
+.threshold-loading {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+
+.threshold-down:contains("-∞"),
+.threshold-up:contains("+∞") {
+    font-weight: 700;
+    font-size: 0.9rem;
 }
 
 .status-indicator-small {

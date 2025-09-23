@@ -392,6 +392,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Aktualizacja biegu w panelu głównym
         const gearValue = message.tractor_gear.gear === 255 ? '---' : message.tractor_gear.gear;
         updateText('current_gear_main', gearValue);
+        
+        // Aktualizacja prędkości ciągnika w zakładce Control
+        if (message.tractor_gps_filtered.speed_mps !== PLACEHOLDER_FLOAT) {
+            const tractorSpeedControlEl = document.getElementById('tractor-speed-control');
+            if (tractorSpeedControlEl) {
+                const speedKmh = (message.tractor_gps_filtered.speed_mps * 3.6).toFixed(2);
+                tractorSpeedControlEl.textContent = `${speedKmh} km/h`;
+            }
+        }
 
         // --- Aktualizacja danych w zakładce "Szczegóły" ---
         // Status Systemu
@@ -1616,6 +1625,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         gearManagerStatus.textContent = 'NIEAKTYWNY';
                         gearManagerStatus.className = 'status-display inactive';
                     }
+                    
+                    // Aktualizuj progi zmian biegów
+                    if (healthData.gear_thresholds) {
+                        updateGearThresholds(healthData.gear_thresholds);
+                    }
                 }
                 
             } catch (error) {
@@ -1933,6 +1947,68 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboardInitialized = true;
     }
     
+    // === FUNKCJA AKTUALIZACJI PROGÓW ZMIAN BIEGÓW ===
+    function updateGearThresholds(thresholds) {
+        try {
+            const upshiftSpeeds = thresholds.upshift_speeds_kmh;
+            const downshiftSpeeds = thresholds.downshift_speeds_kmh;
+            const maxPowershift = thresholds.max_powershift;
+            
+            // Znajdź kontener z progami
+            const gearThresholdsContainer = document.querySelector('.gear-thresholds');
+            if (!gearThresholdsContainer) {
+                console.warn('Nie znaleziono kontenera .gear-thresholds');
+                return;
+            }
+            
+            // Wyczyść istniejące progi
+            gearThresholdsContainer.innerHTML = '';
+            
+            // Dodaj nowe progi dla każdego biegu
+            for (let i = 1; i <= maxPowershift; i++) {
+                const gearIndex = i - 1; // Indeks w tablicach (0-based)
+                
+                if (gearIndex < upshiftSpeeds.length && gearIndex < downshiftSpeeds.length) {
+                    let upshiftSpeed, downshiftSpeed;
+                    
+                    // Obsługa specjalnych przypadków
+                    if (i === 1) {
+                        // Bieg 1: dolny próg = -∞
+                        downshiftSpeed = '-∞';
+                    } else {
+                        downshiftSpeed = downshiftSpeeds[gearIndex].toFixed(1);
+                    }
+                    
+                    if (i === maxPowershift) {
+                        // Ostatni bieg: górny próg = +∞
+                        upshiftSpeed = '+∞';
+                    } else {
+                        upshiftSpeed = upshiftSpeeds[gearIndex].toFixed(1);
+                    }
+                    
+                    const thresholdRow = document.createElement('div');
+                    thresholdRow.className = 'threshold-row';
+                    
+                    thresholdRow.innerHTML = `
+                        <span class="threshold-gear">Bieg ${i}:</span>
+                        <div class="threshold-values">
+                            <span class="threshold-down">↓ ${downshiftSpeed} km/h</span>
+                            <span class="threshold-separator">-</span>
+                            <span class="threshold-up">${upshiftSpeed} km/h ↑</span>
+                        </div>
+                    `;
+                    
+                    gearThresholdsContainer.appendChild(thresholdRow);
+                }
+            }
+            
+            console.log('Progi zmian biegów zaktualizowane:', thresholds);
+            
+        } catch (error) {
+            console.error('Błąd podczas aktualizacji progów zmian biegów:', error);
+        }
+    }
+
     // Wywołaj inicjalizację dashboard
     initializeDashboard();
 });
