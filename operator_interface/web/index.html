@@ -201,39 +201,6 @@
                             <label>Aktualny Półbieg:</label>
                             <div class="gear-display" id="current-gear-display">---</div>
                         </div>
-                        <div class="control-group">
-                            <label>Aktualna Prędkość:</label>
-                            <div class="speed-display" id="current-speed-display">--- km/h</div>
-                        </div>
-                        <div class="control-group">
-                            <label>Progi Zmiany Biegów:</label>
-                            <div class="gear-thresholds">
-                                <div class="threshold-row">
-                                    <span class="gear-label">1→2:</span>
-                                    <span class="threshold-value" id="upshift-1-2">10.0 km/h</span>
-                                </div>
-                                <div class="threshold-row">
-                                    <span class="gear-label">2→3:</span>
-                                    <span class="threshold-value" id="upshift-2-3">13.0 km/h</span>
-                                </div>
-                                <div class="threshold-row">
-                                    <span class="gear-label">3→4:</span>
-                                    <span class="threshold-value" id="upshift-3-4">16.0 km/h</span>
-                                </div>
-                                <div class="threshold-row">
-                                    <span class="gear-label">4→3:</span>
-                                    <span class="threshold-value" id="downshift-4-3">18.0 km/h</span>
-                                </div>
-                                <div class="threshold-row">
-                                    <span class="gear-label">3→2:</span>
-                                    <span class="threshold-value" id="downshift-3-2">11.5 km/h</span>
-                                </div>
-                                <div class="threshold-row">
-                                    <span class="gear-label">2→1:</span>
-                                    <span class="threshold-value" id="downshift-2-1">8.5 km/h</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -618,17 +585,21 @@
                         <div class="node-card" data-node="tractor_filter_node">
                             <div class="node-info">
                                 <div class="node-name">Tractor Filter</div>
-                                <div class="node-status" id="node_tractor_filter">---</div>
                             </div>
-                            <div class="node-health-indicator"></div>
+                            <div class="node-status">
+                                <span class="status-indicator" id="status-tractor_filter_node">●</span>
+                                <span class="status-text" id="text-tractor_filter_node">Unknown</span>
+                            </div>
                         </div>
                         
                         <div class="node-card" data-node="chopper_filter_node">
                             <div class="node-info">
                                 <div class="node-name">Chopper Filter</div>
-                                <div class="node-status" id="node_chopper_filter">---</div>
                             </div>
-                            <div class="node-health-indicator"></div>
+                            <div class="node-status">
+                                <span class="status-indicator" id="status-chopper_filter_node">●</span>
+                                <span class="status-text" id="text-chopper_filter_node">Unknown</span>
+                            </div>
                         </div>
                         
                         <div class="node-card" data-node="speed_controller_node">

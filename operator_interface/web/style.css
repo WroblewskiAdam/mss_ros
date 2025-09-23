@@ -1287,52 +1287,6 @@ button:disabled {
     justify-content: center;
 }
 
-.speed-display {
-    padding: 0.75rem 1rem;
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-light);
-    font-weight: 700;
-    font-size: 1.25rem;
-    text-align: center;
-    color: var(--success-color);
-    min-height: 3rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.gear-thresholds {
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-light);
-    padding: 1rem;
-}
-
-.threshold-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.threshold-row:last-child {
-    border-bottom: none;
-}
-
-.gear-label {
-    font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-.threshold-value {
-    font-weight: 700;
-    color: var(--info-color);
-    font-size: 0.9rem;
-}
-
 .status-indicator-small {
     padding: 0.5rem 1rem;
     border-radius: var(--radius-md);
