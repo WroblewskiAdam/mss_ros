@@ -29,7 +29,7 @@ class BluetoothReceiverNode(Node):
         self.reconnect_delay = self.get_parameter('reconnect_delay').get_parameter_value().double_value
         
         qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=10 
         )

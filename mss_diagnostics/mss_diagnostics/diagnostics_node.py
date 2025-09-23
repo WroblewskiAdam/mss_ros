@@ -34,7 +34,7 @@ class DiagnosticsNode(Node):
         self.last_relative_pos = None
 
         # --- QoS ---
-        qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST, depth=10)
+        qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST, depth=10)
         
         # NAPRAWA QoS: Specjalny QoS dla /target_speed - RELIABLE dla zgodności z position_controller
         target_speed_qos = QoSProfile(reliability=QoSReliabilityPolicy.RELIABLE, history=QoSHistoryPolicy.KEEP_LAST, depth=10)

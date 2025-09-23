@@ -31,7 +31,7 @@ class ServoController(Node):
         
         # QoS i subskrypcja
         sensor_qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            reliability=QoSReliabilityPolicy.RELIABLE,
             history=QoSHistoryPolicy.KEEP_LAST,
             depth=10
         )
