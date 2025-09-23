@@ -1,7 +1,7 @@
 // Plik: operator_interface/web/main.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    const ROS_BRIDGE_URL = 'ws://192.168.1.77:9090';
+    const ROS_BRIDGE_URL = 'ws://192.168.166.18:9090';
     const PLACEHOLDER_FLOAT = 99999.0;
     const PLACEHOLDER_INT = 99999;
     const CHART_MAX_DATA_POINTS = 100;
@@ -44,6 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pokaż pierwszą zakładkę na starcie
     document.querySelector('.tab-button').click();
 
+    // --- Funkcja aktualizacji progów biegów ---
+    function updateGearThresholds() {
+        // Progi upshift
+        document.getElementById('upshift-1-2').textContent = '10.0 km/h';
+        document.getElementById('upshift-2-3').textContent = '13.0 km/h';
+        document.getElementById('upshift-3-4').textContent = '16.0 km/h';
+        
+        // Progi downshift
+        document.getElementById('downshift-4-3').textContent = '18.0 km/h';
+        document.getElementById('downshift-3-2').textContent = '11.5 km/h';
+        document.getElementById('downshift-2-1').textContent = '8.5 km/h';
+    }
+
     // --- Inicjalizacja rozmiarów ikon i punktów referencyjnych ---
     function initializeIconSizes() {
         // Ustaw rozmiary sieczkarni
@@ -84,6 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Inicjalizacja rozmiarów na starcie
     initializeIconSizes();
+    
+    // Inicjalizacja progów biegów
+    updateGearThresholds();
 
     // --- NOWA FUNKCJA: Aktualizacja slajderów z rzeczywistymi parametrami ---
     function updateSlidersFromParameters() {
@@ -962,6 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gearUpBtn = document.getElementById('gear-up-btn');
     const gearDownBtn = document.getElementById('gear-down-btn');
     const currentGearDisplay = document.getElementById('current-gear-display');
+    const currentSpeedDisplay = document.getElementById('current-speed-display');
     const rosStatusIndicator = document.getElementById('ros-status-indicator');
     const lastCommand = document.getElementById('last-command');
     const servoStatusIndicator = document.getElementById('servo-status-indicator');
@@ -979,7 +996,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // NOWE: Elementy UI dla sterowania prędkością w zakładce Regulator
     const targetSpeedRegulator = document.getElementById('target-speed-regulator');
     const setSpeedRegulatorBtn = document.getElementById('set-speed-regulator-btn');
-    const currentSpeedDisplay = document.getElementById('current-speed-display');
 
     // NOWY: Klient dla przełączania trybu serwa
     const setServoModeClient = new ROSLIB.Service({
@@ -1203,6 +1219,14 @@ document.addEventListener('DOMContentLoaded', () => {
             currentGearDisplay.textContent = message.tractor_gear.gear;
         } else {
             currentGearDisplay.textContent = '---';
+        }
+
+        // Aktualizacja wyświetlacza prędkości
+        if (message.tractor_gps_filtered.speed_mps !== PLACEHOLDER_FLOAT) {
+            const speedKmh = message.tractor_gps_filtered.speed_mps * 3.6;
+            currentSpeedDisplay.textContent = `${speedKmh.toFixed(1)} km/h`;
+        } else {
+            currentSpeedDisplay.textContent = '--- km/h';
         }
 
         // Aktualizacja statusu serwa
