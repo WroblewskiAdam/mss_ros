@@ -1,4 +1,4 @@
-# Dokumentacja Systemu MSS (Maszyna Sieczkarnia System)
+# Dokumentacja Systemu MSS (Machone Synchronization System)
 
 ## Przegląd Systemu
 
