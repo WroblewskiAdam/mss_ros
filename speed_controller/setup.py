@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'speed_controller_node = speed_controller.speed_controller_node:main',
             'speed_teleop_node = speed_controller.speed_teleop_node:main',
+            'prbs_generator_node = speed_controller.prbs_generator_node:main',
         ],
     },
 )
