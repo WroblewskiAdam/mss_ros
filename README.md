@@ -520,25 +520,25 @@ graph LR
     end
     
     subgraph "ROS2 Topics - Subskrypcje"
-        C[/diagnostics]
-        D[/speed_controller/state]
-        E[/mss/system_health]
-        F[/mss/node_health/*]
-        G[/servo/position]
-        H[/gears]
+        C["/diagnostics"]
+        D["/speed_controller/state"]
+        E["/mss/system_health"]
+        F["/mss/node_health/*"]
+        G["/servo/position"]
+        H["/gears"]
     end
     
     subgraph "ROS2 Topics - Publikacje"
-        I[/target_speed]
-        J[/servo/set_angle]
+        I["/target_speed"]
+        J["/servo/set_angle"]
     end
     
     subgraph "ROS2 Services"
-        K[/speed_controller/set_enabled]
-        L[/gear_shift_up]
-        M[/gear_shift_down]
-        N[/servo/set_manual_mode]
-        O[/speed_controller_node/set_parameters]
+        K["/speed_controller/set_enabled"]
+        L["/gear_shift_up"]
+        M["/gear_shift_down"]
+        N["/servo/set_manual_mode"]
+        O["/speed_controller_node/set_parameters"]
     end
     
     A -->|WebSocket| B
@@ -709,23 +709,23 @@ graph TB
         end
         
         subgraph "Health Topics"
-            M[/mss/node_health/gps_rtk_node]
-            N[/mss/node_health/bt_receiver_node]
-            O[/mss/node_health/gear_reader_node]
-            P[/mss/node_health/servo_controller]
-            Q[/mss/node_health/gear_shifter]
-            R[/mss/node_health/speed_filter_node]
-            S[/mss/node_health/speed_controller_node]
-            T[/mss/node_health/relative_computer_node]
-            U[/mss/node_health/gear_manager_node]
-            V[/mss/node_health/diagnostics_node]
-            W[/mss/node_health/system_monitor]
-            X[/mss/node_health/mss_health_monitor_node]
+            M["/mss/node_health/gps_rtk_node"]
+            N["/mss/node_health/bt_receiver_node"]
+            O["/mss/node_health/gear_reader_node"]
+            P["/mss/node_health/servo_controller"]
+            Q["/mss/node_health/gear_shifter"]
+            R["/mss/node_health/speed_filter_node"]
+            S["/mss/node_health/speed_controller_node"]
+            T["/mss/node_health/relative_computer_node"]
+            U["/mss/node_health/gear_manager_node"]
+            V["/mss/node_health/diagnostics_node"]
+            W["/mss/node_health/system_monitor"]
+            X["/mss/node_health/mss_health_monitor_node"]
         end
         
         subgraph "Centralny Monitor"
             Y[health_monitor_node]
-            Z[/mss/system_health]
+            Z["/mss/system_health"]
         end
     end
     
@@ -780,8 +780,8 @@ graph TB
         end
         
         subgraph "Outputs"
-            K[/system_metrics]
-            L[/mss/node_health/system_monitor]
+            K["/system_metrics"]
+            L["/mss/node_health/system_monitor"]
             M[Web Interface]
         end
     end
