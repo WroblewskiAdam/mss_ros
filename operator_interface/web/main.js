@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const PLACEHOLDER_FLOAT = 99999.0;
     const PLACEHOLDER_INT = 99999;
     const CHART_MAX_DATA_POINTS = 100;
+    const SPEED_CHART_MAX_DATA_POINTS = 200; // 20 Hz * 10 sekund = 200 punktów
 
     // --- Zmienne stanu systemu ---
     let isAutopilotOn = false;           // Główny autopilot (regulator prędkości + pozycji)
@@ -238,8 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 'y-axis-2': { 
                     type: 'linear', 
                     position: 'right', 
-                    beginAtZero: true, 
-                    max: 36, 
+                    min: 5, 
+                    max: 25, 
                     ticks: { color: '#cbd5e1' }, 
                     title: { display: true, text: 'Prędkość [km/h]', color: '#cbd5e1' },
                     grid: { display: false }
@@ -298,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         controllerChart.data.datasets[1].data.push(message.current_speed * 3.6); // m/s -> km/h
         controllerChart.data.datasets[2].data.push(message.control_output);
 
-        if (controllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
+        if (controllerChart.data.labels.length > SPEED_CHART_MAX_DATA_POINTS) {
             controllerChart.data.labels.shift();
             controllerChart.data.datasets.forEach(dataset => dataset.data.shift());
         }
