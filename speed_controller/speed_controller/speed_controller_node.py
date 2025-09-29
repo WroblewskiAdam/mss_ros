@@ -72,8 +72,8 @@ class SpeedControllerNode(Node):
 
         # --- Publishery ---
         self.servo_command_pub = self.create_publisher(StampedInt32, '/servo/set_angle', default_qos)
-        # NOWY PUBLISHER: Do danych na wykres (20 Hz)
-        self.state_pub = self.create_publisher(SpeedControllerState, '/speed_controller/state', high_freq_qos)
+        # NOWY PUBLISHER: Do danych na wykres (20 Hz) - RELIABLE dla zgodności z loggerem
+        self.state_pub = self.create_publisher(SpeedControllerState, '/speed_controller/state', default_qos)
         # NOWY PUBLISHER: Health reporting
         self.health_pub = self.create_publisher(String, '/mss/node_health/speed_controller_node', default_qos)
 
