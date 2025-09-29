@@ -12,9 +12,14 @@
     <div class="main-container">
         <!-- Górny pasek statusu -->
         <div class="status-bar-container">
-            <div id="connection-status" class="status-indicator status-off">ROZŁĄCZONO</div>
-            <div id="autopilot-status" class="status-indicator status-off">AUTOPILOT WYŁĄCZONY</div>
-            <button id="toggle-autopilot-btn" class="btn-engage" disabled>AKTYWUJ</button>
+            <div class="status-left">
+                <div id="connection-status" class="status-indicator status-off">ROZŁĄCZONO</div>
+                <div id="autopilot-status" class="status-indicator status-off">AUTOPILOT WYŁĄCZONY</div>
+                <button id="toggle-autopilot-btn" class="btn-engage" disabled>AKTYWUJ</button>
+            </div>
+            <div class="status-right">
+                <button id="toggle-logger-btn" class="btn-logger" disabled>START LOG</button>
+            </div>
         </div>
 
         <!-- Zakładki -->
@@ -503,6 +508,26 @@
                 <!-- Wykresy systemowe -->
                 <div class="system-charts">
                     <!-- Usunięto wykres wydajności systemu -->
+                </div>
+                
+                <!-- NOWA SEKCJA: Logi -->
+                <div class="logs-section">
+                    <div class="logs-card">
+                        <div class="card-header">
+                            <h3>📁 Pliki Logów Systemu</h3>
+                            <button id="refresh-logs-btn" class="btn-apply">🔄 Odśwież</button>
+                        </div>
+                        <div class="card-content">
+                            <div class="logs-info">
+                                <span id="logs-count">Ładowanie...</span>
+                            </div>
+                            <div class="logs-container">
+                                <div id="logs-list" class="logs-list">
+                                    <div class="loading">Ładowanie listy plików...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

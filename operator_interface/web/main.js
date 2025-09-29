@@ -1,8 +1,8 @@
 // Plik: operator_interface/web/main.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // const ROS_BRIDGE_URL = 'ws://192.168.1.77:9090';
-    const ROS_BRIDGE_URL = 'ws://192.168.121.18:9090';
+    const ROS_BRIDGE_URL = 'ws://192.168.1.77:9090';
+    // const ROS_BRIDGE_URL = 'ws://192.168.121.18:9090';
     const PLACEHOLDER_FLOAT = 99999.0;
     const PLACEHOLDER_INT = 99999;
     const CHART_MAX_DATA_POINTS = 100;
@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAutopilotOn = false;           // Główny autopilot (regulator prędkości + pozycji)
     let isSpeedControllerEnabled = false; // Regulator prędkości
     let isPositionControllerEnabled = false; // Regulator pozycji (na razie nieistniejący)
+    let isLoggerEnabled = false;         // Logger danych
     
     // --- Zmienne skalowania ikon - ZMIEŃ TUTAJ ROZMIARY ---
     const CHOPPER_SCALE = 1.4;  // Skala sieczkarni (0.1 = 10%, 1.0 = 100%, 2.0 = 200%)
@@ -680,11 +681,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const connectionStatusDiv = document.getElementById('connection-status');
     const autopilotStatusDiv = document.getElementById('autopilot-status');
     const toggleAutopilotBtn = document.getElementById('toggle-autopilot-btn');
+    const toggleLoggerBtn = document.getElementById('toggle-logger-btn');
 
     ros.on('connection', () => {
         connectionStatusDiv.textContent = 'POŁĄCZONO';
         connectionStatusDiv.className = 'status-indicator status-on';
         toggleAutopilotBtn.disabled = false;
+        toggleLoggerBtn.disabled = false;
         showNotification('Połączono z ROS Bridge', 'success');
         
         // NOWA FUNKCJA: Aktualizuj slajdery z rzeczywistymi parametrami po połączeniu
@@ -697,6 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionStatusDiv.textContent = 'BŁĄD POŁĄCZENIA';
         connectionStatusDiv.className = 'status-indicator status-off';
         toggleAutopilotBtn.disabled = true;
+        toggleLoggerBtn.disabled = true;
         showNotification('Błąd połączenia z ROS Bridge', 'error');
     });
     
@@ -704,6 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionStatusDiv.textContent = 'ROZŁĄCZONO';
         connectionStatusDiv.className = 'status-indicator status-off';
         toggleAutopilotBtn.disabled = true;
+        toggleLoggerBtn.disabled = true;
         showNotification('Rozłączono z ROS Bridge', 'warning');
     });
 
@@ -725,6 +730,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const setPositionControllerClient = new ROSLIB.Service({
         ros: ros,
         name: '/position_controller/set_enabled',
+        serviceType: 'std_srvs/srv/SetBool'
+    });
+
+    // --- Serwis dla logowania danych ---
+    const setLoggerClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/mss_data_logger/set_enabled',
         serviceType: 'std_srvs/srv/SetBool'
     });
 
@@ -1421,6 +1433,37 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // --- Logika przycisku logowania ---
+    toggleLoggerBtn.onclick = () => {
+        const targetState = !isLoggerEnabled;
+        const request = new ROSLIB.ServiceRequest({ data: targetState });
+        
+        setLoggerClient.callService(request, (result) => {
+            if (result.success) {
+                isLoggerEnabled = targetState;
+                updateLoggerUI();
+                
+                if (targetState) {
+                    showNotification('Logowanie danych rozpoczęte', 'success');
+                } else {
+                    showNotification('Logowanie danych zatrzymane', 'warning');
+                }
+            } else {
+                showNotification('Błąd zmiany stanu logowania!', 'error');
+            }
+        });
+    };
+
+    function updateLoggerUI() {
+        if (isLoggerEnabled) {
+            toggleLoggerBtn.className = 'btn-logger logging';
+            toggleLoggerBtn.textContent = 'STOP LOG';
+        } else {
+            toggleLoggerBtn.className = 'btn-logger';
+            toggleLoggerBtn.textContent = 'START LOG';
+        }
+    }
+
     // --- Logika ustawiania pozycji zadanej ---
     if (setPositionBtn && targetPositionInput) {
         setPositionBtn.onclick = () => {
@@ -2012,4 +2055,162 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Wywołaj inicjalizację dashboard
     initializeDashboard();
+
+    // === LOGIKA SEKCJI LOGÓW W ZAKŁADCE SYSTEM ===
+    const refreshLogsBtn = document.getElementById('refresh-logs-btn');
+    const logsList = document.getElementById('logs-list');
+    const logsCount = document.getElementById('logs-count');
+
+    // Funkcja do pobierania listy plików logów
+    async function fetchLogsList() {
+        try {
+            logsList.innerHTML = '<div class="loading">Ładowanie listy plików...</div>';
+            
+            const response = await fetch('/api/logs');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const logs = await response.json();
+            displayLogsList(logs);
+            
+        } catch (error) {
+            console.error('Błąd podczas pobierania listy logów:', error);
+            logsList.innerHTML = `
+                <div class="empty-logs">
+                    <div class="empty-logs-icon">❌</div>
+                    <p>Błąd podczas ładowania listy plików</p>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    // Funkcja do wyświetlania listy plików
+    function displayLogsList(logs) {
+        if (!logs || logs.length === 0) {
+            logsList.innerHTML = `
+                <div class="empty-logs">
+                    <div class="empty-logs-icon">📁</div>
+                    <p>Brak plików logów</p>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">Uruchom logger i kliknij "START LOG" aby utworzyć pliki</p>
+                </div>
+            `;
+            logsCount.textContent = '0 plików';
+            return;
+        }
+
+        // Sortuj pliki według daty modyfikacji (najnowsze pierwsze)
+        logs.sort((a, b) => new Date(b.modified) - new Date(a.modified));
+
+        logsList.innerHTML = logs.map(log => `
+            <div class="log-item">
+                <div class="log-info">
+                    <div class="log-filename">${log.filename}</div>
+                    <div class="log-details">
+                        <span>📅 ${formatDate(log.modified)}</span>
+                        <span>📊 ${formatFileSize(log.size)}</span>
+                        <span>📝 ${log.records} rekordów</span>
+                    </div>
+                </div>
+                <div class="log-actions">
+                    <button class="btn-download" onclick="downloadLog('${log.filename}')">
+                        ⬇️ Pobierz
+                    </button>
+                    <button class="btn-delete" onclick="deleteLog('${log.filename}')">
+                        🗑️ Usuń
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        logsCount.textContent = `${logs.length} plik${logs.length === 1 ? '' : logs.length < 5 ? 'i' : 'ów'}`;
+    }
+
+    // Funkcja do formatowania daty
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('pl-PL', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Funkcja do formatowania rozmiaru pliku
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // Funkcja do pobierania pliku
+    async function downloadLog(filename) {
+        try {
+            const response = await fetch(`/api/logs/download/${encodeURIComponent(filename)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showNotification(`Pobieranie pliku: ${filename}`, 'success');
+            
+        } catch (error) {
+            console.error('Błąd podczas pobierania pliku:', error);
+            showNotification(`Błąd pobierania pliku: ${error.message}`, 'error');
+        }
+    }
+
+    // Funkcja do usuwania pliku
+    async function deleteLog(filename) {
+        if (!confirm(`Czy na pewno chcesz usunąć plik "${filename}"?`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/logs/delete/${encodeURIComponent(filename)}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            showNotification(`Plik "${filename}" został usunięty`, 'success');
+            fetchLogsList(); // Odśwież listę
+            
+        } catch (error) {
+            console.error('Błąd podczas usuwania pliku:', error);
+            showNotification(`Błąd usuwania pliku: ${error.message}`, 'error');
+        }
+    }
+
+    // Event listener dla przycisku odświeżania
+    if (refreshLogsBtn) {
+        refreshLogsBtn.addEventListener('click', fetchLogsList);
+    }
+
+    // Automatyczne ładowanie listy przy otwarciu zakładki System
+    document.addEventListener('click', (event) => {
+        if (event.target.textContent === 'System') {
+            fetchLogsList();
+        }
+    });
+
+    // Eksportuj funkcje globalnie
+    window.downloadLog = downloadLog;
+    window.deleteLog = deleteLog;
 });

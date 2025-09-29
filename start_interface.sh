@@ -121,8 +121,8 @@ fi
 # Przejdź do katalogu web
 cd operator_interface/web
 
-# Uruchom web server w tle
-$PYTHON_CMD -m http.server 8080 > webserver.log 2>&1 &
+# Uruchom web server w tle (z API dla logów)
+$PYTHON_CMD server.py 8080 > webserver.log 2>&1 &
 WEBSERVER_PID=$!
 
 # Wróć do katalogu src

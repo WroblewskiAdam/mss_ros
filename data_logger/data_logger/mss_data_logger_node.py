@@ -10,11 +10,12 @@ from datetime import datetime
 from typing import Optional
 
 from std_msgs.msg import Float64, String, Bool
+from std_srvs.srv import SetBool
 from my_robot_interfaces.msg import (
     GpsRtk, Gear, StampedInt32, DiagnosticData, 
     DistanceMetrics, SpeedControllerState
 )
-from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 
 class MSSDataLoggerNode(Node):
     """
@@ -26,7 +27,7 @@ class MSSDataLoggerNode(Node):
         super().__init__('mss_data_logger_node')
         
         # --- Konfiguracja plików ---
-        log_directory = os.path.join(os.path.expanduser('~'), 'mss_logs')
+        log_directory = os.path.join(os.path.expanduser('~'), 'mss_ros/src/logs_mss')
         if not os.path.exists(log_directory):
             os.makedirs(log_directory)
         
@@ -94,10 +95,14 @@ class MSSDataLoggerNode(Node):
         self.PLACEHOLDER_INT = 99999
         self.PLACEHOLDER_FLOAT = 99999.0
         
+        # --- Stan logowania ---
+        self.is_logging_enabled = False
+        
         # --- QoS Profile ---
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
             depth=10
         )
         
@@ -178,6 +183,13 @@ class MSSDataLoggerNode(Node):
         # Timer do zapisu danych (10 Hz)
         self.log_timer = self.create_timer(0.1, self.log_data)
         
+        # Serwis do włączania/wyłączania logowania
+        self.set_enabled_service = self.create_service(
+            SetBool,
+            '/mss_data_logger/set_enabled',
+            self.set_enabled_callback
+        )
+        
         # Licznik zapisów
         self.log_count = 0
         
@@ -220,8 +232,37 @@ class MSSDataLoggerNode(Node):
         """Callback dla statusu autopilota"""
         self.last_autopilot_status = msg
     
+    def set_enabled_callback(self, request, response):
+        """Callback dla serwisu włączania/wyłączania logowania"""
+        self.is_logging_enabled = request.data
+        
+        if self.is_logging_enabled:
+            # Tworzenie nowego pliku przy każdym włączeniu
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.log_path = os.path.join(os.path.dirname(self.log_path), f'mss_system_log_{timestamp}.csv')
+            
+            # Zamknij stary plik i otwórz nowy
+            if hasattr(self, 'csv_file'):
+                self.csv_file.close()
+            
+            self.csv_file = open(self.log_path, 'w', newline='')
+            self.csv_writer = csv.writer(self.csv_file)
+            self.csv_writer.writerow(self.csv_headers)
+            
+            self.get_logger().info(f"Logowanie włączone - nowy plik: {self.log_path}")
+        else:
+            self.get_logger().info("Logowanie wyłączone")
+        
+        response.success = True
+        response.message = f"Logowanie {'włączone' if self.is_logging_enabled else 'wyłączone'}"
+        return response
+    
     def log_data(self):
         """Główna funkcja logowania danych - wywoływana przez timer"""
+        # Loguj tylko gdy włączone
+        if not self.is_logging_enabled:
+            return
+            
         # Przygotuj dane do zapisu
         current_time = time.time()
         

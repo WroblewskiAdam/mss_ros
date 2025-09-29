@@ -64,9 +64,21 @@ body {
     padding: 0.75rem 1rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    justify-content: space-between;
     border-bottom: 1px solid var(--border-color);
     flex-wrap: wrap;
+}
+
+.status-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.status-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
 .status-indicator {
@@ -89,7 +101,7 @@ body {
 }
 
 /* Przyciski */
-.btn-engage, .btn-disengage, .btn-settings, .btn-apply {
+.btn-engage, .btn-disengage, .btn-settings, .btn-apply, .btn-logger {
     padding: 0.75rem 1.5rem;
     border: none;
     border-radius: var(--radius-md);
@@ -128,10 +140,169 @@ body {
     margin-top: 1rem;
 }
 
+.btn-logger {
+    background: var(--info-color);
+    color: white;
+}
+
+.btn-logger:hover:not(:disabled) {
+    background: #0e7490;
+    transform: translateY(-1px);
+}
+
+.btn-logger.logging {
+    background: var(--warning-color);
+}
+
+.btn-logger.logging:hover:not(:disabled) {
+    background: #c2410c;
+}
+
 button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none !important;
+}
+
+/* === STYLE DLA SEKCJI LOGÓW W ZAKŁADCE SYSTEM === */
+.logs-section {
+    margin-top: 2rem;
+}
+
+.logs-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.logs-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.logs-card .card-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.logs-card .card-content {
+    padding: 1.5rem;
+}
+
+.logs-info {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.logs-container {
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.logs-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.log-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.log-item:last-child {
+    border-bottom: none;
+}
+
+.log-item:hover {
+    background: var(--bg-secondary);
+}
+
+.log-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.log-filename {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    word-break: break-all;
+}
+
+.log-details {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.log-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-download {
+    background: var(--success-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-download:hover {
+    background: #047857;
+    transform: translateY(-1px);
+}
+
+.btn-delete {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+    background: var(--danger-color-hover);
+    transform: translateY(-1px);
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.empty-logs {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.empty-logs-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
 }
 
 /* Zakładki */

@@ -28,3 +28,6 @@ rosbridge.log
 operator_interface/web/webserver.log
 operator_interface/web/rosbridge.log
 operator_interface/web/.mss_pids
+
+# Katalog z logami systemu MSS
+logs_mss/
