@@ -31,12 +31,10 @@ class MSSDataLoggerNode(Node):
         if not os.path.exists(log_directory):
             os.makedirs(log_directory)
         
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.log_path = os.path.join(log_directory, f'mss_system_log_{timestamp}.csv')
-        
-        # Otwórz plik CSV
-        self.csv_file = open(self.log_path, 'w', newline='')
-        self.csv_writer = csv.writer(self.csv_file)
+        # Nie tworzymy pliku przy inicjalizacji - tylko przy włączeniu logowania
+        self.log_path = None
+        self.csv_file = None
+        self.csv_writer = None
         
         # Nagłówki kolumn CSV
         self.csv_headers = [
@@ -76,8 +74,8 @@ class MSSDataLoggerNode(Node):
             'bt_status', 'autopilot_status'
         ]
         
-        self.csv_writer.writerow(self.csv_headers)
-        self.get_logger().info(f"Logowanie danych MSS do: {self.log_path}")
+        # Nie zapisujemy nagłówków przy inicjalizacji - tylko przy włączeniu logowania
+        self.get_logger().info("MSS Data Logger zainicjalizowany - oczekiwanie na włączenie logowania")
         
         # --- Zmienne do przechowywania ostatnich wiadomości ---
         self.last_tractor_gps: Optional[GpsRtk] = None
@@ -238,19 +236,28 @@ class MSSDataLoggerNode(Node):
         
         if self.is_logging_enabled:
             # Tworzenie nowego pliku przy każdym włączeniu
+            log_directory = os.path.join(os.path.expanduser('~'), 'mss_ros/src/logs_mss')
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.log_path = os.path.join(os.path.dirname(self.log_path), f'mss_system_log_{timestamp}.csv')
+            self.log_path = os.path.join(log_directory, f'mss_system_log_{timestamp}.csv')
             
-            # Zamknij stary plik i otwórz nowy
-            if hasattr(self, 'csv_file'):
+            # Zamknij stary plik jeśli istnieje
+            if self.csv_file:
                 self.csv_file.close()
             
+            # Otwórz nowy plik i zapisz nagłówki
             self.csv_file = open(self.log_path, 'w', newline='')
             self.csv_writer = csv.writer(self.csv_file)
             self.csv_writer.writerow(self.csv_headers)
             
             self.get_logger().info(f"Logowanie włączone - nowy plik: {self.log_path}")
         else:
+            # Zamknij plik przy wyłączeniu
+            if self.csv_file:
+                self.csv_file.close()
+                self.csv_file = None
+                self.csv_writer = None
+                self.log_path = None
+            
             self.get_logger().info("Logowanie wyłączone")
         
         response.success = True
@@ -402,9 +409,11 @@ class MSSDataLoggerNode(Node):
     
     def destroy_node(self):
         """Zamknij plik logów przy zamykaniu węzła"""
-        self.get_logger().info(f'Zamykanie pliku logów. Łącznie zapisano {self.log_count} rekordów.')
-        if self.csv_file:
+        if self.is_logging_enabled and self.csv_file:
+            self.get_logger().info(f'Zamykanie pliku logów. Łącznie zapisano {self.log_count} rekordów.')
             self.csv_file.close()
+        else:
+            self.get_logger().info('Zamykanie węzła - logowanie nie było aktywne.')
         super().destroy_node()
 
 def main(args=None):
