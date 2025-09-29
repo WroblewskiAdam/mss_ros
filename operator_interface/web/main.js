@@ -1,7 +1,8 @@
 // Plik: operator_interface/web/main.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    const ROS_BRIDGE_URL = 'ws://192.168.1.77:9090';
+    // const ROS_BRIDGE_URL = 'ws://192.168.1.77:9090';
+    const ROS_BRIDGE_URL = 'ws://192.168.121.18:9090';
     const PLACEHOLDER_FLOAT = 99999.0;
     const PLACEHOLDER_INT = 99999;
     const CHART_MAX_DATA_POINTS = 100;
