@@ -140,6 +140,15 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True,
         ),
+        
+        # === Data Logger ===
+        Node(
+            package='data_logger',
+            executable='mss_data_logger_node',
+            name='mss_data_logger_node',
+            output='screen',
+            emulate_tty=True,
+        ),
                     
         # === System Monitor RPi ===
         TimerAction(
