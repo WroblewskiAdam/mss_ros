@@ -91,6 +91,7 @@ class RelativeComputerNode(Node):
         
         dist_longitudinal = np.dot(vector_chopper_to_tractor, chopper_heading_vector)
         dist_lateral = np.cross(chopper_heading_vector, vector_chopper_to_tractor)
+        dist_longitudinal = - dist_longitudinal
 
         metrics_msg = DistanceMetrics()
         

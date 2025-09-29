@@ -36,6 +36,17 @@ class MSSHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             # Standardowa obsługa plików statycznych
             super().do_GET()
     
+    def do_POST(self):
+        """Obsługa żądań POST"""
+        parsed_path = urllib.parse.urlparse(self.path)
+        path = parsed_path.path
+        
+        if path.startswith('/api/logs/rename/'):
+            filename = urllib.parse.unquote(path.split('/')[-1])
+            self.handle_logs_rename(filename)
+        else:
+            self.send_error(404, "Not Found")
+    
     def do_DELETE(self):
         """Obsługa żądań DELETE"""
         parsed_path = urllib.parse.urlparse(self.path)
@@ -88,6 +99,63 @@ class MSSHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             # Wyślij plik
             self.send_file_response(file_path)
+            
+        except Exception as e:
+            self.send_error(500, f"Internal Server Error: {str(e)}")
+    
+    def handle_logs_rename(self, filename):
+        """Zmienia nazwę pliku logów"""
+        try:
+            # Bezpieczeństwo - sprawdź czy plik jest w katalogu logów
+            file_path = self.logs_dir / filename
+            if not file_path.exists() or not file_path.is_file():
+                self.send_error(404, "File not found")
+                return
+            
+            # Sprawdź czy to plik CSV
+            if not filename.endswith('.csv'):
+                self.send_error(400, "Invalid file type")
+                return
+            
+            # Odczytaj dane z żądania
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length == 0:
+                self.send_error(400, "No data provided")
+                return
+            
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+            except json.JSONDecodeError:
+                self.send_error(400, "Invalid JSON")
+                return
+            
+            new_name = data.get('new_name')
+            if not new_name:
+                self.send_error(400, "No new name provided")
+                return
+            
+            # Sprawdź czy nowa nazwa jest bezpieczna
+            if not new_name.endswith('.csv'):
+                self.send_error(400, "New name must end with .csv")
+                return
+            
+            # Sprawdź czy nowa nazwa nie zawiera niebezpiecznych znaków
+            if '/' in new_name or '\\' in new_name or '..' in new_name:
+                self.send_error(400, "Invalid characters in new name")
+                return
+            
+            new_file_path = self.logs_dir / new_name
+            
+            # Sprawdź czy plik o nowej nazwie już istnieje
+            if new_file_path.exists():
+                self.send_error(409, "File with new name already exists")
+                return
+            
+            # Zmień nazwę pliku
+            file_path.rename(new_file_path)
+            
+            self.send_json_response({'success': True, 'message': f'File renamed from {filename} to {new_name}'})
             
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {str(e)}")

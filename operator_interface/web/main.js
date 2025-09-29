@@ -2114,6 +2114,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
                 <div class="log-actions">
+                    <button class="btn-rename" onclick="renameLog('${log.filename}')">
+                        ✏️ Zmień nazwę
+                    </button>
                     <button class="btn-download" onclick="downloadLog('${log.filename}')">
                         ⬇️ Pobierz
                     </button>
@@ -2174,6 +2177,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Funkcja do zmiany nazwy pliku
+    async function renameLog(filename) {
+        const newName = prompt(`Wprowadź nową nazwę pliku (bez rozszerzenia .csv):`, filename.replace('.csv', ''));
+        
+        if (!newName || newName.trim() === '') {
+            return;
+        }
+        
+        const newFilename = newName.trim() + '.csv';
+        
+        if (newFilename === filename) {
+            showNotification('Nazwa pliku nie została zmieniona', 'info');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/logs/rename/${encodeURIComponent(filename)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ new_name: newFilename })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            if (result.success) {
+                showNotification(`Plik "${filename}" został przemianowany na "${newFilename}"`, 'success');
+                fetchLogsList(); // Odśwież listę
+            } else {
+                throw new Error(result.message || 'Nieznany błąd');
+            }
+            
+        } catch (error) {
+            console.error('Błąd podczas zmiany nazwy pliku:', error);
+            showNotification(`Błąd zmiany nazwy pliku: ${error.message}`, 'error');
+        }
+    }
+
     // Funkcja do usuwania pliku
     async function deleteLog(filename) {
         if (!confirm(`Czy na pewno chcesz usunąć plik "${filename}"?`)) {
@@ -2213,4 +2258,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // Eksportuj funkcje globalnie
     window.downloadLog = downloadLog;
     window.deleteLog = deleteLog;
+    window.renameLog = renameLog;
 });

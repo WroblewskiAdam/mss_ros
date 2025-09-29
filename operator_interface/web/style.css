@@ -254,6 +254,22 @@ button:disabled {
     gap: 0.5rem;
 }
 
+.btn-rename {
+    background: var(--info-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-rename:hover {
+    background: #0e7490;
+    transform: translateY(-1px);
+}
+
 .btn-download {
     background: var(--success-color);
     color: white;
