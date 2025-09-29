@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const PLACEHOLDER_INT = 99999;
     const CHART_MAX_DATA_POINTS = 100;
     const SPEED_CHART_MAX_DATA_POINTS = 200; // 20 Hz * 10 sekund = 200 punktów
+    const POSITION_CHART_MAX_DATA_POINTS = 200; // 20 Hz * 10 sekund = 200 punktów (jak prędkość)
 
     // --- Zmienne stanu systemu ---
     let isAutopilotOn = false;           // Główny autopilot (regulator prędkości + pozycji)
@@ -347,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
         positionControllerChart.data.datasets[1].data.push(message.distance_longitudinal);
         positionControllerChart.data.datasets[2].data.push((window.lastTargetSpeed || 0) * 3.6); // m/s -> km/h
 
-        if (positionControllerChart.data.labels.length > CHART_MAX_DATA_POINTS) {
+        if (positionControllerChart.data.labels.length > POSITION_CHART_MAX_DATA_POINTS) {
             positionControllerChart.data.labels.shift();
             positionControllerChart.data.datasets.forEach(dataset => dataset.data.shift());
         }
