@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/launch', ['launch/mss_data_logger.launch.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -21,6 +22,8 @@ setup(
     entry_points={
         'console_scripts': [
             'logger_node = data_logger.logger_node:main',
+            'mss_data_logger_node = data_logger.mss_data_logger_node:main',
+            'test_mss_logger = data_logger.scripts.test_mss_logger:main',
         ],
     },
 )
