@@ -38,6 +38,9 @@ class GpsMockupNode(Node):
         # NOWE: Parametr do sterowania kursem ciągnika
         self.declare_parameter('tractor_heading_offset_deg', 0.0)   # Offset kursu (stopnie) - dodatnie = w prawo, ujemne = w lewo
         
+        # NOWE: Parametr do włączania/wyłączania symulacji sieczkarni
+        self.declare_parameter('enable_chopper_simulation', False)   # Włącz/wyłącz symulację sieczkarni
+        
         self.publish_frequency = self.get_parameter('publish_frequency_hz').get_parameter_value().double_value
         
         # Konwersja z km/h na m/s
@@ -53,6 +56,9 @@ class GpsMockupNode(Node):
         self.tractor_offset_longitudinal = self.get_parameter('tractor_offset_longitudinal').get_parameter_value().double_value
         self.tractor_offset_lateral = self.get_parameter('tractor_offset_lateral').get_parameter_value().double_value
         self.tractor_heading_offset = self.get_parameter('tractor_heading_offset_deg').get_parameter_value().double_value
+        
+        # NOWE: Parametr włączania/wyłączania symulacji sieczkarni
+        self.enable_chopper_simulation = self.get_parameter('enable_chopper_simulation').get_parameter_value().bool_value
         
         # QoS - RELIABLE dla kompatybilności z innymi węzłami
         qos_profile = QoSProfile(
@@ -90,6 +96,7 @@ class GpsMockupNode(Node):
         self.get_logger().info(f'Offset wzdłużny ciągnika: {self.tractor_offset_longitudinal} m')
         self.get_logger().info(f'Offset poprzeczny ciągnika: {self.tractor_offset_lateral} m')
         self.get_logger().info(f'Offset kursu ciągnika: {self.tractor_heading_offset}°')
+        self.get_logger().info(f'Symulacja sieczkarni: {"WŁĄCZONA" if self.enable_chopper_simulation else "WYŁĄCZONA"}')
         self.get_logger().info(f'Szum GPS RTK FIX: pozycja ±1.5cm, prędkość ±0.015 m/s')
     
     def parameters_callback(self, params):
@@ -125,6 +132,9 @@ class GpsMockupNode(Node):
             elif param.name == 'tractor_heading_offset_deg':
                 self.tractor_heading_offset = param.value
                 self.get_logger().info(f'Zaktualizowano offset kursu ciągnika: {self.tractor_heading_offset}°')
+            elif param.name == 'enable_chopper_simulation':
+                self.enable_chopper_simulation = param.value
+                self.get_logger().info(f'Symulacja sieczkarni: {"WŁĄCZONA" if self.enable_chopper_simulation else "WYŁĄCZONA"}')
         
         return SetParametersResult(successful=True)
     
@@ -149,14 +159,15 @@ class GpsMockupNode(Node):
         )
         self.tractor_publisher.publish(tractor_msg)
         
-        # Publikuj dane sieczkarni
-        chopper_msg = self.create_gps_message(
-            self.chopper_position, 
-            self.current_heading, 
-            self.chopper_speed,  # Użyj konfigurowalnej prędkości sieczkarni
-            "CHOPPER"
-        )
-        self.chopper_publisher.publish(chopper_msg)
+        # Publikuj dane sieczkarni (tylko jeśli włączone)
+        if self.enable_chopper_simulation:
+            chopper_msg = self.create_gps_message(
+                self.chopper_position, 
+                self.current_heading, 
+                self.chopper_speed,  # Użyj konfigurowalnej prędkości sieczkarni
+                "CHOPPER"
+            )
+            self.chopper_publisher.publish(chopper_msg)
     
     def update_chopper_position(self, elapsed_time):
         """Aktualizuje pozycję sieczkarni (punkt centralny) z realistycznym ruchem"""
