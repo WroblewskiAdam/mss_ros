@@ -18,8 +18,8 @@ class SpeedControllerNode(Node):
         super().__init__('speed_controller_node')
 
         # --- Deklaracja parametrów ---
-        self.declare_parameter('kp', 10.00)
-        self.declare_parameter('ki', 20.00)
+        self.declare_parameter('kp', 20.50)
+        self.declare_parameter('ki', 40.50)
         self.declare_parameter('kd', 0.00)  # Dodany parametr Kd
         # ... (reszta parametrów bez zmian)
         self.declare_parameter('v_idle', 1.3359)
