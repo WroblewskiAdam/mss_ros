@@ -17,8 +17,8 @@ class PositionControllerNode(Node):
         
         # --- Parametry konfiguracyjne ---
         self.declare_parameter('target_distance', 0.0)  # m - docelowa odległość wzdłużna
-        self.declare_parameter('position_tolerance', 1.0)  # m - tolerancja pozycji
-        self.declare_parameter('speed_tolerance', 0.41)  # m/s - tolerancja prędkości (1 km/h)
+        self.declare_parameter('position_tolerance', 5.0)  # m - tolerancja pozycji
+        self.declare_parameter('speed_tolerance', 1)  # m/s - tolerancja prędkości (1 km/h)
         
         # Parametry PID - domyślne (będą nadpisywane przez parametry dla półbiegów)
         self.declare_parameter('Kp', 0.6)  # wzmocnienie proporcjonalne
@@ -26,21 +26,21 @@ class PositionControllerNode(Node):
         self.declare_parameter('Kd', 0.0)  # wzmocnienie różniczkujące
         
         # Parametry PID dla poszczególnych półbiegów
-        self.declare_parameter('gear1_Kp', 1.2509)  # Półbieg 1 - wolny, stabilny
+        self.declare_parameter('gear1_Kp', 0.8)  # Półbieg 1 - wolny, stabilny
         self.declare_parameter('gear1_Ki', 0.00)
-        self.declare_parameter('gear1_Kd', 1.1157)
+        self.declare_parameter('gear1_Kd', 0.1)
         
-        self.declare_parameter('gear2_Kp', 0.8075)  # Półbieg 2 - średni
+        self.declare_parameter('gear2_Kp', 0.73)  # Półbieg 2 - średni
         self.declare_parameter('gear2_Ki', 0.0)
-        self.declare_parameter('gear2_Kd', 0.8178)
+        self.declare_parameter('gear2_Kd', 0.24)
         
-        self.declare_parameter('gear3_Kp', 1.2)  # Półbieg 3 - szybszy
-        self.declare_parameter('gear3_Ki', 0.15)
-        self.declare_parameter('gear3_Kd', 0.2)
+        self.declare_parameter('gear3_Kp', 0.8)  # Półbieg 3 - szybszy
+        self.declare_parameter('gear3_Ki', 0.0)
+        self.declare_parameter('gear3_Kd', 0.0)
         
-        self.declare_parameter('gear4_Kp', 1.5)  # Półbieg 4 - najszybszy
-        self.declare_parameter('gear4_Ki', 0.2)
-        self.declare_parameter('gear4_Kd', 0.25)
+        self.declare_parameter('gear4_Kp', 0.9)  # Półbieg 4 - najszybszy
+        self.declare_parameter('gear4_Ki', 0.0)
+        self.declare_parameter('gear4_Kd', 0.0)
         
         self.declare_parameter('min_speed', 0.5)  # m/s - minimalna prędkość
         self.declare_parameter('max_speed', 8.0)  # m/s - maksymalna prędkość
