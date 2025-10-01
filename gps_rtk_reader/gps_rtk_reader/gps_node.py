@@ -60,7 +60,8 @@ class GpsRtkNode(Node):
             'speed_mps': 0.0,
             'heading_deg': 0.0,
             'timestamp_gngga': 0.0,
-            'timestamp_agric': 0.0  # <-- NOWOŚĆ: Czas ostatniej wiadomości AGRIC
+            'timestamp_agric': 0.0,  # Czas ostatniej wiadomości AGRIC (tylko dla kursu)
+            'timestamp_gnvtg': 0.0   # NOWOŚĆ: Czas ostatniej wiadomości GNVTG (dla prędkości)
         }
         self.data_lock = threading.Lock()
 
@@ -82,7 +83,7 @@ class GpsRtkNode(Node):
 
         self.publish_timer = self.create_timer(1.0 / self.publish_frequency, self._publish_gps_data_callback)
         self.get_logger().info(f"GPS RTK Node uruchomiony. Publikowanie na '/gps_rtk_data/tractor' z częstotliwością {self.publish_frequency} Hz.")
-        self.get_logger().info("Node oczekuje teraz na wiadomości GNGGA oraz AGRIC.")
+        self.get_logger().info("Node oczekuje teraz na wiadomości GNGGA, GNVTG oraz AGRIC.")
 
     def publish_health(self):
         """Publikuje status zdrowia węzła."""
@@ -120,6 +121,12 @@ class GpsRtkNode(Node):
                 if time_since_gngga > 10.0:  # Więcej niż 10 sekund
                     warnings.append(f"Dane GPS nieaktualne ({time_since_gngga:.1f}s)")
             
+            # Sprawdź świeżość danych GNVTG
+            if hasattr(self, 'latest_gps_data') and 'timestamp_gnvtg' in self.latest_gps_data:
+                time_since_gnvtg = current_time - self.latest_gps_data['timestamp_gnvtg']
+                if time_since_gnvtg > 10.0:  # Więcej niż 10 sekund
+                    warnings.append(f"Dane prędkości GNVTG nieaktualne ({time_since_gnvtg:.1f}s)")
+            
             # Przygotuj dane health
             health_data = {
                 'status': 'running' if not errors else 'error',
@@ -128,6 +135,7 @@ class GpsRtkNode(Node):
                 'ntrip_status': ntrip_status,
                 'threads_status': threads_status,
                 'gps_data_age': time_since_gngga if 'time_since_gngga' in locals() else 0.0,
+                'gnvtg_data_age': time_since_gnvtg if 'time_since_gnvtg' in locals() else 0.0,
                 'errors': errors,
                 'warnings': warnings,
                 'cpu_usage': psutil.cpu_percent(),
@@ -181,7 +189,61 @@ class GpsRtkNode(Node):
                                 except (ValueError, IndexError) as e:
                                     self.get_logger().warn(f"Błąd parsowania GNGGA '{decoded_line}': {e}")
                         
-                        # --- NOWA LOGIKA PARSOWANIA WIADOMOŚCI AGRIC ---
+                        # --- PARSOWANIE WIADOMOŚCI GNVTG (prędkość) ---
+                        elif decoded_line.startswith("$GNVTG"):
+                            try:
+                                # Sprawdź czy linia nie jest uszkodzona
+                                if decoded_line.count(',') < 8:
+                                    self.get_logger().warn(f"Pominięto uszkodzoną linię GNVTG: {decoded_line}")
+                                    continue
+                                
+                                parts = decoded_line.split(',')
+                                # print(parts)  # Odkomentuj dla debugowania
+                                
+                                # GNVTG format: $GNVTG,track_deg,T,mag_deg,M,speed_knots,N,speed_kmh,K,mode*checksum
+                                # Indeksy: 0=header, 1=track, 2=T, 3=mag, 4=M, 5=speed_knots, 6=N, 7=speed_kmh, 8=K, 9=mode
+                                
+                                if len(parts) >= 8:
+                                    # Sprawdź różne możliwe pozycje prędkości w km/h
+                                    speed_kmh = None
+                                    
+                                    # Próba 1: Pole 7 (standardowe)
+                                    if len(parts) > 7 and parts[7] and parts[7] != 'K':
+                                        speed_str = parts[7].strip()
+                                        if self._validate_numeric_string(speed_str, "prędkość"):
+                                            speed_kmh = float(speed_str)
+                                    
+                                    # Próba 2: Pole 6 może zawierać prędkość (gdy brak przecinka)
+                                    if speed_kmh is None and len(parts) > 6 and parts[6]:
+                                        speed_str = parts[6].strip()
+                                        # Sprawdź czy zawiera 'N' i liczbę (np. "N0.01150")
+                                        if 'N' in speed_str and len(speed_str) > 1:
+                                            # Wyciągnij liczbę po 'N'
+                                            try:
+                                                numeric_part = speed_str.split('N')[1]
+                                                if self._validate_numeric_string(numeric_part, "prędkość"):
+                                                    speed_kmh = float(numeric_part)
+                                            except (ValueError, IndexError):
+                                                pass
+                                    
+                                    # Próba 3: Pole 8 może zawierać prędkość (gdy struktura jest przesunięta)
+                                    if speed_kmh is None and len(parts) > 8 and parts[8] and parts[8] != 'K':
+                                        speed_str = parts[8].strip()
+                                        if self._validate_numeric_string(speed_str, "prędkość"):
+                                            speed_kmh = float(speed_str)
+                                    
+                                    if speed_kmh is not None:
+                                        # Konwersja z km/h na m/s
+                                        self.latest_gps_data['speed_mps'] = speed_kmh / 3.6
+                                        self.latest_gps_data['timestamp_gnvtg'] = current_host_time
+                                        self.get_logger().debug(f"GNVTG: Prędkość {speed_kmh} km/h -> {self.latest_gps_data['speed_mps']:.2f} m/s")
+                                    else:
+                                        self.get_logger().warn(f"GNVTG: Nie znaleziono prawidłowej prędkości w wiadomości: {decoded_line}", throttle_duration_sec=5)
+                                        self.get_logger().debug(f"GNVTG: Pola: {parts}")
+                            except (ValueError, IndexError) as e:
+                                self.get_logger().warn(f"Błąd parsowania GNVTG: {e} w wiadomości: {decoded_line}")
+                        
+                        # --- PARSOWANIE WIADOMOŚCI AGRIC (tylko kurs) ---
                         elif decoded_line.startswith("#AGRICA"):
                             try:
                                 # Wiadomość ma format: #HEADER;DATA*CRC
@@ -189,23 +251,39 @@ class GpsRtkNode(Node):
                                 data_part = decoded_line.split(';')[1].split('*')[0]
                                 agric_parts = data_part.split(',')
                                 
-                                # Zgodnie z dokumentacją (Tabela 7-82) [cite: 77, 842-846]
-                                # Indeksy są przesunięte o -2 względem ID w tabeli.
-                                # ID 21: Heading -> indeks 19
-                                # ID 24: Speed (scalar) -> indeks 22
-                                heading_status = int(agric_parts[11 - 2])
-                                # if heading_status in [0, 4, 5]: # Tylko jeśli status to FIXED lub FLOAT
+                                # Walidacja długości tablicy
+                                if len(agric_parts) < 21:
+                                    self.get_logger().warn(f"AGRIC: Za mało pól ({len(agric_parts)}), oczekiwano minimum 21", throttle_duration_sec=5)
+                                    continue
+                                
+                                # Walidacja i konwersja statusu kursu
+                                try:
+                                    heading_status = int(agric_parts[11 - 2])
+                                except (ValueError, IndexError) as e:
+                                    self.get_logger().warn(f"AGRIC: Błąd parsowania statusu kursu: {e}", throttle_duration_sec=5)
+                                    continue
+                                
                                 if heading_status not in [69,420]: # Tylko jeśli status to FIXED lub FLOAT
-                                    self.latest_gps_data['heading_deg'] = float(agric_parts[21 - 2])
-                                    # Prędkość w AGRIC jest w km/h, potrzebujemy m/s
-                                    speed_kmh = float(agric_parts[24 - 2])
-                                    self.latest_gps_data['speed_mps'] = speed_kmh
-                                    self.latest_gps_data['timestamp_agric'] = current_host_time
+                                    # Walidacja i konwersja kursu
+                                    try:
+                                        heading_str = agric_parts[21 - 2].strip()
+                                        
+                                        # Użyj funkcji walidacji
+                                        if not self._validate_numeric_string(heading_str, "kurs"):
+                                            self.get_logger().warn(f"AGRIC: Nieprawidłowy format kursu: '{heading_str}' w wiadomości: {decoded_line}", throttle_duration_sec=5)
+                                            continue
+                                        
+                                        self.latest_gps_data['heading_deg'] = float(heading_str)
+                                        self.latest_gps_data['timestamp_agric'] = current_host_time
+                                        self.get_logger().debug(f"AGRIC: Kurs {self.latest_gps_data['heading_deg']:.2f}°")
+                                    except (ValueError, IndexError) as e:
+                                        self.get_logger().warn(f"AGRIC: Błąd konwersji kursu '{agric_parts[21 - 2]}': {e} w wiadomości: {decoded_line}", throttle_duration_sec=5)
+                                        continue
                                 else:
-                                    self.get_logger().warn(f"Otrzymano AGRIC, ale status kursu ('{heading_status}') nie jest poprawny. Ignoruję kurs.", throttle_duration_sec=5)
+                                    self.get_logger().warn(f"AGRIC: Status kursu ('{heading_status}') nie jest poprawny. Ignoruję kurs.", throttle_duration_sec=5)
                             except (ValueError, IndexError) as e:
-                                self.get_logger().warn(f"Błąd parsowania AGRIC '{decoded_line}': {e}")
-                        # --- KONIEC NOWEJ LOGIKI ---
+                                self.get_logger().warn(f"Błąd parsowania AGRIC: {e} w wiadomości: {decoded_line}", throttle_duration_sec=5)
+                        # --- KONIEC PARSOWANIA ---
 
                     if self.last_gngga_to_ntrip_str and (time.time() - self.last_gngga_send_time > self.gngga_ntrip_interval):
                         if self.ntrip_socket:
@@ -247,12 +325,13 @@ class GpsRtkNode(Node):
         current_ros_time = self.get_clock().now()
 
         with self.data_lock:
-            # Sprawdzamy świeżość danych z obu źródeł
+            # Sprawdzamy świeżość danych z trzech źródeł
             time_since_gngga = current_ros_time.nanoseconds / 1e9 - self.latest_gps_data['timestamp_gngga']
             time_since_agric = current_ros_time.nanoseconds / 1e9 - self.latest_gps_data['timestamp_agric']
+            time_since_gnvtg = current_ros_time.nanoseconds / 1e9 - self.latest_gps_data['timestamp_gnvtg']
 
-            # Publikujemy, tylko jeśli mamy aktualne dane z GNGGA (pozycja) i AGRIC (kurs)
-            if time_since_gngga < 2.0 and time_since_agric < 2.0:
+            # Publikujemy, tylko jeśli mamy aktualne dane z GNGGA (pozycja), AGRIC (kurs) i GNVTG (prędkość)
+            if time_since_gngga < 2.0 and time_since_agric < 2.0 and time_since_gnvtg < 2.0:
                 msg.header.stamp = current_ros_time.to_msg()
                 msg.header.frame_id = "gps_link"
 
@@ -262,13 +341,13 @@ class GpsRtkNode(Node):
                 msg.longitude_deg = self.latest_gps_data['longitude_deg']
                 msg.altitude_m = self.latest_gps_data['altitude_m']
                 
-                # Używamy danych z wiadomości AGRIC
+                # Używamy danych z wiadomości GNVTG (prędkość) i AGRIC (kurs)
                 msg.speed_mps = self.latest_gps_data['speed_mps']
                 msg.heading_deg = self.latest_gps_data['heading_deg']
 
                 self.publisher_.publish(msg)
             else:
-                 self.get_logger().debug(f"Czekam na świeże dane: GNGGA_age={time_since_gngga:.2f}s, AGRIC_age={time_since_agric:.2f}s")
+                 self.get_logger().debug(f"Czekam na świeże dane: GNGGA_age={time_since_gngga:.2f}s, AGRIC_age={time_since_agric:.2f}s, GNVTG_age={time_since_gnvtg:.2f}s")
 
 
     # ... (reszta funkcji bez zmian - skopiuj je z oryginału) ...
@@ -390,6 +469,47 @@ class GpsRtkNode(Node):
                 self.get_logger().error(f"Nieoczekiwany błąd w wątku NTRIP: {e}", exc_info=True)
                 time.sleep(1)
         self.get_logger().info("Wątek czytnika NTRIP zakończony.")
+
+    def _validate_numeric_string(self, value_str, field_name="value"):
+        """
+        Waliduje czy string może być przekonwertowany na float.
+        Zwraca True jeśli string jest poprawny, False w przeciwnym razie.
+        """
+        if not value_str or not isinstance(value_str, str):
+            return False
+        
+        value_str = value_str.strip()
+        if not value_str:
+            return False
+        
+        # Sprawdź czy zawiera tylko dozwolone znaki
+        allowed_chars = set('0123456789.-+eE')
+        if not all(c in allowed_chars for c in value_str):
+            return False
+        
+        # Sprawdź czy nie ma podwójnych kropek lub innych błędów formatu
+        if value_str.count('.') > 1:
+            return False
+        
+        # Sprawdź czy nie zaczyna się od kropki (oprócz .0)
+        if value_str.startswith('.') and len(value_str) > 1:
+            return False
+        
+        # Sprawdź czy nie kończy się kropką
+        if value_str.endswith('.'):
+            return False
+        
+        # Sprawdź czy nie ma podwójnych znaków +/-
+        if value_str.count('+') > 1 or value_str.count('-') > 1:
+            return False
+        
+        # Sprawdź czy + i - nie są w środku (oprócz notacji naukowej)
+        if '+' in value_str[1:] and 'e' not in value_str.lower():
+            return False
+        if '-' in value_str[1:] and 'e' not in value_str.lower():
+            return False
+        
+        return True
 
     def _nmea_to_decimal_degrees(self, nmea_coord, hemisphere):
         if not nmea_coord:
