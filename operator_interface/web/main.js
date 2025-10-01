@@ -91,17 +91,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- NOWA FUNKCJA: Aktualizacja slajderów z rzeczywistymi parametrami ---
     function updateSlidersFromParameters() {
-        // Pobierz parametry regulatora pozycji
+        // Pobierz parametry regulatora pozycji (globalne tolerancje)
         const positionParamsRequest = new ROSLIB.ServiceRequest({
-            names: ['Kp', 'Ki', 'position_tolerance', 'speed_tolerance']
+            names: ['position_tolerance', 'speed_tolerance']
         });
         
         getPositionParamsClient.callService(positionParamsRequest, (result) => {
-            if (result.values && result.values.length >= 4) {
-                // Aktualizuj slajdery regulatora pozycji
+            if (result.values && result.values.length >= 2) {
+                // Aktualizuj slajdery tolerancji
+                if (positionToleranceSlider) {
+                    positionToleranceSlider.value = result.values[0].double_value;
+                    positionToleranceValueSpan.textContent = result.values[0].double_value.toFixed(1);
+                }
+                
+                if (speedToleranceSlider) {
+                    // Konwersja z m/s na km/h
+                    const speedToleranceKmh = result.values[1].double_value * 3.6;
+                    speedToleranceSlider.value = speedToleranceKmh;
+                    speedToleranceValueSpan.textContent = speedToleranceKmh.toFixed(1);
+                }
+                
+                console.log('Slajdery tolerancji regulatora pozycji zaktualizowane');
+            }
+        });
+
+        // Pobierz parametry PID dla aktualnie wybranego półbiegu
+        const selectedGear = gearSelector ? parseInt(gearSelector.value) : 1;
+        const gearParamsRequest = new ROSLIB.ServiceRequest({
+            names: [`gear${selectedGear}_Kp`, `gear${selectedGear}_Ki`, `gear${selectedGear}_Kd`]
+        });
+        
+        getPositionParamsClient.callService(gearParamsRequest, (result) => {
+            if (result.values && result.values.length >= 3) {
+                // Aktualizuj slajdery PID dla wybranego półbiegu
                 if (positionKpSlider) {
                     positionKpSlider.value = result.values[0].double_value;
-                    positionKpValueSpan.textContent = result.values[0].double_value.toFixed(1);
+                    positionKpValueSpan.textContent = result.values[0].double_value.toFixed(2);
                 }
                 
                 if (positionKiSlider) {
@@ -109,19 +134,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     positionKiValueSpan.textContent = result.values[1].double_value.toFixed(2);
                 }
                 
-                if (positionToleranceSlider) {
-                    positionToleranceSlider.value = result.values[2].double_value;
-                    positionToleranceValueSpan.textContent = result.values[2].double_value.toFixed(1);
+                if (positionKdSlider) {
+                    positionKdSlider.value = result.values[2].double_value;
+                    positionKdValueSpan.textContent = result.values[2].double_value.toFixed(2);
                 }
                 
-                if (speedToleranceSlider) {
-                    // Konwersja z m/s na km/h
-                    const speedToleranceKmh = result.values[3].double_value * 3.6;
-                    speedToleranceSlider.value = speedToleranceKmh;
-                    speedToleranceValueSpan.textContent = speedToleranceKmh.toFixed(1);
-                }
+                // Aktualizuj domyślne parametry
+                defaultGearParams[selectedGear] = {
+                    Kp: result.values[0].double_value,
+                    Ki: result.values[1].double_value,
+                    Kd: result.values[2].double_value
+                };
                 
-                console.log('Slajdery regulatora pozycji zaktualizowane z rzeczywistymi parametrami');
+                console.log(`Slajdery PID dla półbiegu ${selectedGear} zaktualizowane`);
             }
         });
         
@@ -273,7 +298,11 @@ document.addEventListener('DOMContentLoaded', () => {
     closeBtn.onclick = () => modal.style.display = 'none';
     
     if (positionSettingsBtn) {
-        positionSettingsBtn.onclick = () => positionModal.style.display = 'block';
+        positionSettingsBtn.onclick = () => {
+            positionModal.style.display = 'block';
+            // Inicjalizuj slajdery dla domyślnego półbiegu
+            updateSlidersForGear(1);
+        };
     }
     if (positionCloseBtn) {
         positionCloseBtn.onclick = () => positionModal.style.display = 'none';
@@ -574,10 +603,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Logika strojenia regulatora pozycji ---
     const positionKpSlider = document.getElementById('position-kp-slider');
     const positionKiSlider = document.getElementById('position-ki-slider');
+    const positionKdSlider = document.getElementById('position-kd-slider');
     const positionToleranceSlider = document.getElementById('position-tolerance-slider');
     const speedToleranceSlider = document.getElementById('speed-tolerance-slider');
+    const gearSelector = document.getElementById('gear-selector');
     const positionKpValueSpan = document.getElementById('position-kp-value');
     const positionKiValueSpan = document.getElementById('position-ki-value');
+    const positionKdValueSpan = document.getElementById('position-kd-value');
     const positionToleranceValueSpan = document.getElementById('position-tolerance-value');
     const speedToleranceValueSpan = document.getElementById('speed-tolerance-value');
 
@@ -587,10 +619,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Slajdery regulatora pozycji
     if (positionKpSlider) {
-        positionKpSlider.oninput = () => positionKpValueSpan.textContent = parseFloat(positionKpSlider.value).toFixed(1);
+        positionKpSlider.oninput = () => positionKpValueSpan.textContent = parseFloat(positionKpSlider.value).toFixed(2);
     }
     if (positionKiSlider) {
         positionKiSlider.oninput = () => positionKiValueSpan.textContent = parseFloat(positionKiSlider.value).toFixed(2);
+    }
+    if (positionKdSlider) {
+        positionKdSlider.oninput = () => positionKdValueSpan.textContent = parseFloat(positionKdSlider.value).toFixed(2);
     }
     if (positionToleranceSlider) {
         positionToleranceSlider.oninput = () => positionToleranceValueSpan.textContent = parseFloat(positionToleranceSlider.value).toFixed(1);
@@ -651,23 +686,63 @@ document.addEventListener('DOMContentLoaded', () => {
         serviceType: 'rcl_interfaces/srv/GetParameters'
     });
 
+    // --- Domyślne parametry PID dla każdego półbiegu ---
+    const defaultGearParams = {
+        1: { Kp: 1.2509, Ki: 0.00, Kd: 1.1157 },  // Półbieg 1 - wolny, stabilny
+        2: { Kp: 0.8075, Ki: 0.0, Kd: 0.8178 },   // Półbieg 2 - średni
+        3: { Kp: 1.2, Ki: 0.15, Kd: 0.2 },        // Półbieg 3 - szybszy
+        4: { Kp: 1.5, Ki: 0.2, Kd: 0.25 }         // Półbieg 4 - najszybszy
+    };
+
+    // --- Funkcja aktualizacji slajderów na podstawie wybranego półbiegu ---
+    function updateSlidersForGear(gear) {
+        if (defaultGearParams[gear]) {
+            const params = defaultGearParams[gear];
+            if (positionKpSlider) {
+                positionKpSlider.value = params.Kp;
+                positionKpValueSpan.textContent = params.Kp.toFixed(2);
+            }
+            if (positionKiSlider) {
+                positionKiSlider.value = params.Ki;
+                positionKiValueSpan.textContent = params.Ki.toFixed(2);
+            }
+            if (positionKdSlider) {
+                positionKdSlider.value = params.Kd;
+                positionKdValueSpan.textContent = params.Kd.toFixed(2);
+            }
+        }
+    }
+
+    // --- Obsługa zmiany półbiegu ---
+    if (gearSelector) {
+        gearSelector.onchange = () => {
+            const selectedGear = parseInt(gearSelector.value);
+            updateSlidersForGear(selectedGear);
+        };
+    }
+
+    // --- Przycisk zastosowania parametrów ---
     const applyPositionPidBtn = document.getElementById('apply-position-pid-btn');
     if (applyPositionPidBtn) {
         applyPositionPidBtn.onclick = () => {
+            const selectedGear = parseInt(gearSelector.value);
             const params = [
-                { name: 'Kp', value: { type: 2, double_value: parseFloat(positionKpSlider.value) } },
-                { name: 'Ki', value: { type: 2, double_value: parseFloat(positionKiSlider.value) } },
+                { name: `gear${selectedGear}_Kp`, value: { type: 2, double_value: parseFloat(positionKpSlider.value) } },
+                { name: `gear${selectedGear}_Ki`, value: { type: 2, double_value: parseFloat(positionKiSlider.value) } },
+                { name: `gear${selectedGear}_Kd`, value: { type: 2, double_value: parseFloat(positionKdSlider.value) } },
                 { name: 'position_tolerance', value: { type: 2, double_value: parseFloat(positionToleranceSlider.value) } },
                 { name: 'speed_tolerance', value: { type: 2, double_value: parseFloat(speedToleranceSlider.value) / 3.6 } } // km/h -> m/s
             ];
             const request = new ROSLIB.ServiceRequest({ parameters: params });
             setPositionParamsClient.callService(request, (result) => {
                 if (result.results.every(r => r.successful)) {
-                    showNotification('Parametry regulatora pozycji zaktualizowane!', 'success');
-                    // NOWA FUNKCJA: Aktualizuj slajdery po zastosowaniu parametrów
-                    setTimeout(() => {
-                        updateSlidersFromParameters();
-                    }, 500);
+                    showNotification(`Parametry PID dla półbiegu ${selectedGear} zaktualizowane!`, 'success');
+                    // Aktualizuj domyślne parametry
+                    defaultGearParams[selectedGear] = {
+                        Kp: parseFloat(positionKpSlider.value),
+                        Ki: parseFloat(positionKiSlider.value),
+                        Kd: parseFloat(positionKdSlider.value)
+                    };
                 } else {
                     showNotification('Błąd aktualizacji parametrów regulatora pozycji!', 'error');
                 }
@@ -676,6 +751,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     positionModal.style.display = 'none';
                 }
             });
+        };
+    }
+
+    // --- Przycisk resetu do domyślnych parametrów ---
+    const resetPositionPidBtn = document.getElementById('reset-position-pid-btn');
+    if (resetPositionPidBtn) {
+        resetPositionPidBtn.onclick = () => {
+            const selectedGear = parseInt(gearSelector.value);
+            updateSlidersForGear(selectedGear);
+            showNotification(`Parametry półbiegu ${selectedGear} zresetowane do domyślnych`, 'info');
         };
     }
 

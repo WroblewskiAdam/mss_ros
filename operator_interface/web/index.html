@@ -751,27 +751,50 @@
     <div id="position-settings-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>⚙️ Nastawy Regulatora Pozycji PI</h3>
+                <h3>⚙️ Nastawy Regulatora Pozycji PID</h3>
                 <span class="close">&times;</span>
             </div>
             <div class="modal-body">
+                <!-- Wybór półbiegu -->
                 <div class="settings-group">
-                    <label for="position-kp-slider">Kp (Wzmocnienie): <span id="position-kp-value">1.0</span></label>
-                    <input type="range" id="position-kp-slider" min="0" max="10" value="1" step="0.1">
+                    <label for="gear-selector">Półbieg do konfiguracji:</label>
+                    <select id="gear-selector">
+                        <option value="1">Półbieg 1 (wolny, stabilny)</option>
+                        <option value="2">Półbieg 2 (średni)</option>
+                        <option value="3">Półbieg 3 (szybszy)</option>
+                        <option value="4">Półbieg 4 (najszybszy)</option>
+                    </select>
+                </div>
+                
+                <!-- Parametry PID dla wybranego półbiegu -->
+                <div class="settings-group">
+                    <label for="position-kp-slider">Kp (Wzmocnienie): <span id="position-kp-value">1.25</span></label>
+                    <input type="range" id="position-kp-slider" min="0" max="5" value="1.25" step="0.01">
                 </div>
                 <div class="settings-group">
-                    <label for="position-ki-slider">Ki (Całka): <span id="position-ki-value">0.1</span></label>
-                    <input type="range" id="position-ki-slider" min="0" max="2" value="0.1" step="0.01">
+                    <label for="position-ki-slider">Ki (Całka): <span id="position-ki-value">0.00</span></label>
+                    <input type="range" id="position-ki-slider" min="0" max="1" value="0.00" step="0.01">
                 </div>
                 <div class="settings-group">
-                    <label for="position-tolerance-slider">Tolerancja pozycji: <span id="position-tolerance-value">0.5</span> m</label>
-                    <input type="range" id="position-tolerance-slider" min="0.1" max="2.0" value="0.5" step="0.1">
+                    <label for="position-kd-slider">Kd (Różniczka): <span id="position-kd-value">1.12</span></label>
+                    <input type="range" id="position-kd-slider" min="0" max="3" value="1.12" step="0.01">
+                </div>
+                
+                <!-- Parametry tolerancji (globalne) -->
+                <div class="settings-group">
+                    <label for="position-tolerance-slider">Tolerancja pozycji: <span id="position-tolerance-value">1.0</span> m</label>
+                    <input type="range" id="position-tolerance-slider" min="0.1" max="5.0" value="1.0" step="0.1">
                 </div>
                 <div class="settings-group">
                     <label for="speed-tolerance-slider">Tolerancja prędkości: <span id="speed-tolerance-value">1.0</span> km/h</label>
-                    <input type="range" id="speed-tolerance-slider" min="0.1" max="3.6" value="1.0" step="0.1">
+                    <input type="range" id="speed-tolerance-slider" min="0.1" max="5.0" value="1.0" step="0.1">
                 </div>
-                <button id="apply-position-pid-btn" class="btn-apply">Zastosuj Parametry</button>
+                
+                <!-- Przyciski akcji -->
+                <div class="settings-buttons">
+                    <button id="apply-position-pid-btn" class="btn-apply">Zastosuj Parametry</button>
+                    <button id="reset-position-pid-btn" class="btn-reset">Reset do Domyślnych</button>
+                </div>
             </div>
         </div>
     </div>

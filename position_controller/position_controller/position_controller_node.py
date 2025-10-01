@@ -180,20 +180,18 @@ class PositionControllerNode(Node):
                 'Kd': self.get_parameter(f'gear{gear}_Kd').get_parameter_value().double_value
             }
         
-        self.get_logger().info("Parametry PID dla półbiegów:")
-        for gear, params in self.gear_pid_params.items():
-            self.get_logger().info(f"  Półbieg {gear}: Kp={params['Kp']:.3f}, Ki={params['Ki']:.3f}, Kd={params['Kd']:.3f}")
+        self.get_logger().info("Parametry PID dla półbiegów zainicjalizowane")
 
     def update_pid_params_for_current_gear(self):
         """Aktualizuje parametry PID na podstawie aktualnego półbiegu."""
         if self.current_gear in self.gear_pid_params:
-            old_params = f"Kp={self.Kp:.3f}, Ki={self.Ki:.3f}, Kd={self.Kd:.3f}"
+            old_params = f"Kp={self.Kp:.4f}, Ki={self.Ki:.4f}, Kd={self.Kd:.4f}"
             
             self.Kp = self.gear_pid_params[self.current_gear]['Kp']
             self.Ki = self.gear_pid_params[self.current_gear]['Ki']
             self.Kd = self.gear_pid_params[self.current_gear]['Kd']
             
-            new_params = f"Kp={self.Kp:.3f}, Ki={self.Ki:.3f}, Kd={self.Kd:.3f}"
+            new_params = f"Kp={self.Kp:.4f}, Ki={self.Ki:.4f}, Kd={self.Kd:.4f}"
             self.get_logger().info(f"Zmiana parametrów PID dla półbiegu {self.current_gear}: {old_params} → {new_params}")
             
             # Reset integratora przy zmianie parametrów
@@ -231,6 +229,8 @@ class PositionControllerNode(Node):
 
     def parameters_callback(self, params):
         """Ten callback jest automatycznie wywoływany, gdy ktoś zmieni parametry węzła."""
+        self.get_logger().info("=== OTRZYMANO ZMIANĘ PARAMETRÓW ===")
+        
         for param in params:
             if param.name == "Kp":
                 self.update_parameter_and_variable('Kp', param.value, 'Kp')
@@ -248,21 +248,42 @@ class PositionControllerNode(Node):
             elif param.name.startswith("gear") and param.name.endswith("_Kp"):
                 gear_num = int(param.name[4:5])
                 if gear_num in self.gear_pid_params:
+                    old_value = self.gear_pid_params[gear_num]['Kp']
                     self.gear_pid_params[gear_num]['Kp'] = param.value
+                    self.get_logger().info(f"Zmiana gear{gear_num}_Kp: {old_value:.4f} → {param.value:.4f}")
                     if self.current_gear == gear_num:
                         self.Kp = param.value
+                        self.get_logger().info(f"Zaktualizowano aktywny Kp dla półbiegu {gear_num}")
             elif param.name.startswith("gear") and param.name.endswith("_Ki"):
                 gear_num = int(param.name[4:5])
                 if gear_num in self.gear_pid_params:
+                    old_value = self.gear_pid_params[gear_num]['Ki']
                     self.gear_pid_params[gear_num]['Ki'] = param.value
+                    self.get_logger().info(f"Zmiana gear{gear_num}_Ki: {old_value:.4f} → {param.value:.4f}")
                     if self.current_gear == gear_num:
                         self.Ki = param.value
+                        self.get_logger().info(f"Zaktualizowano aktywny Ki dla półbiegu {gear_num}")
             elif param.name.startswith("gear") and param.name.endswith("_Kd"):
                 gear_num = int(param.name[4:5])
                 if gear_num in self.gear_pid_params:
+                    old_value = self.gear_pid_params[gear_num]['Kd']
                     self.gear_pid_params[gear_num]['Kd'] = param.value
+                    self.get_logger().info(f"Zmiana gear{gear_num}_Kd: {old_value:.4f} → {param.value:.4f}")
                     if self.current_gear == gear_num:
                         self.Kd = param.value
+                        self.get_logger().info(f"Zaktualizowano aktywny Kd dla półbiegu {gear_num}")
+        
+        # Log aktualnych parametrów dla wszystkich półbiegów po zmianie
+        self.get_logger().info("=== AKTUALNE PARAMETRY PID DLA WSZYSTKICH PÓŁBIEGÓW ===")
+        for gear in range(1, 5):
+            if gear in self.gear_pid_params:
+                params = self.gear_pid_params[gear]
+                active_marker = " [AKTYWNY]" if gear == self.current_gear else ""
+                self.get_logger().info(f"Półbieg {gear}: Kp={params['Kp']:.4f}, Ki={params['Ki']:.4f}, Kd={params['Kd']:.4f}{active_marker}")
+        self.get_logger().info(f"Aktualnie aktywny półbieg: {self.current_gear}")
+        self.get_logger().info(f"Aktywne parametry: Kp={self.Kp:.4f}, Ki={self.Ki:.4f}, Kd={self.Kd:.4f}")
+        self.get_logger().info("=== KONIEC ZMIANY PARAMETRÓW ===")
+        
         return SetParametersResult(successful=True)
 
     def set_parameters_service_callback(self, request, response):
@@ -326,7 +347,19 @@ class PositionControllerNode(Node):
                 response.results.append(result)
             
             if success_count == total_params:
-                self.get_logger().info(f"Wszystkie parametry zaktualizowane pomyślnie: Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, position_tolerance={self.position_tolerance}, speed_tolerance={self.speed_tolerance}, target_distance={self.target_distance}")
+                self.get_logger().info("=== PARAMETRY ZAKTUALIZOWANE POMYŚLNIE ===")
+                self.get_logger().info(f"Parametry globalne: Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, position_tolerance={self.position_tolerance}, speed_tolerance={self.speed_tolerance}, target_distance={self.target_distance}")
+                
+                # Log nastaw dla wszystkich półbiegów
+                self.get_logger().info("=== NASTAWY PID DLA WSZYSTKICH PÓŁBIEGÓW ===")
+                for gear in range(1, 5):
+                    if gear in self.gear_pid_params:
+                        params = self.gear_pid_params[gear]
+                        active_marker = " [AKTYWNY]" if gear == self.current_gear else ""
+                        self.get_logger().info(f"Półbieg {gear}: Kp={params['Kp']:.4f}, Ki={params['Ki']:.4f}, Kd={params['Kd']:.4f}{active_marker}")
+                self.get_logger().info(f"Aktualnie aktywny półbieg: {self.current_gear}")
+                self.get_logger().info(f"Aktywne parametry: Kp={self.Kp:.4f}, Ki={self.Ki:.4f}, Kd={self.Kd:.4f}")
+                self.get_logger().info("=== KONIEC AKTUALIZACJI PARAMETRÓW ===")
             else:
                 self.get_logger().warn(f"Zaktualizowano {success_count}/{total_params} parametrów")
                 
@@ -549,6 +582,7 @@ class PositionControllerNode(Node):
             f"Półbieg={self.current_gear}"
         )
         self.publish_status("AKTYWNY", detailed_status)
+        
 
     def publish_status(self, status, message):
         """Publikuje status autopilota."""
