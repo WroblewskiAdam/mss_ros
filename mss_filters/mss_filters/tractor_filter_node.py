@@ -22,6 +22,9 @@ class TractorFilterNode(Node):
         # --- Parametry filtru pozycji ---
         self.declare_parameter('position_filter_cutoff_hz', 0.5)
         
+        # --- Parametry filtru headingu ---
+        self.declare_parameter('heading_filter_cutoff_hz', 0.3)
+        
         # --- Parametry filtra medianowego ---
         self.declare_parameter('median_filter_window', 5)
         self.declare_parameter('median_filter_on_off', True)  # Parametr włączania/wyłączania filtra medianowego
@@ -33,6 +36,9 @@ class TractorFilterNode(Node):
         
         # Parametry filtru pozycji
         position_fpass = self.get_parameter('position_filter_cutoff_hz').get_parameter_value().double_value
+        
+        # Parametry filtru headingu
+        heading_fpass = self.get_parameter('heading_filter_cutoff_hz').get_parameter_value().double_value
         
         # Parametry filtra medianowego
         self.median_window = self.get_parameter('median_filter_window').get_parameter_value().integer_value
@@ -72,10 +78,15 @@ class TractorFilterNode(Node):
         self.lat_zi = lfilter_zi(self.position_b, self.position_a)
         self.lon_zi = lfilter_zi(self.position_b, self.position_a)
         
+        # Inicjalizacja filtru Butterworth dla headingu
+        self.heading_b, self.heading_a = butter(order, heading_fpass, btype='low', analog=False, fs=fs)
+        self.heading_zi = lfilter_zi(self.heading_b, self.heading_a)
+        
         # Inicjalizacja buforów dla filtra medianowego
         self.speed_buffer = deque(maxlen=self.median_window)
         self.lat_buffer = deque(maxlen=self.median_window)
         self.lon_buffer = deque(maxlen=self.median_window)
+        self.heading_buffer = deque(maxlen=self.median_window)
 
         # Statystyki
         self.filtered_count = 0
@@ -84,6 +95,7 @@ class TractorFilterNode(Node):
         self.get_logger().info(f"Filtr ciągnika uruchomiony.")
         self.get_logger().info(f"Parametry filtru prędkości: cutoff={speed_fpass}Hz, order={order}, fs={fs}Hz")
         self.get_logger().info(f"Parametry filtru pozycji: cutoff={position_fpass}Hz, order={order}, fs={fs}Hz")
+        self.get_logger().info(f"Parametry filtru headingu: cutoff={heading_fpass}Hz, order={order}, fs={fs}Hz")
         self.get_logger().info(f"Parametry filtra medianowego: window={self.median_window}, enabled={self.median_filter_enabled}")
 
     def publish_health(self):
@@ -91,7 +103,7 @@ class TractorFilterNode(Node):
         try:
             # Sprawdź status filtrów
             filter_status = "OK"
-            if not hasattr(self, 'speed_b') or not hasattr(self, 'speed_a') or not hasattr(self, 'position_b') or not hasattr(self, 'position_a'):
+            if not hasattr(self, 'speed_b') or not hasattr(self, 'speed_a') or not hasattr(self, 'position_b') or not hasattr(self, 'position_a') or not hasattr(self, 'heading_b') or not hasattr(self, 'heading_a'):
                 filter_status = "ERROR"
             
             # Zbierz dane o błędach i ostrzeżeniach
@@ -113,6 +125,7 @@ class TractorFilterNode(Node):
                 'filter_status': filter_status,
                 'speed_filter_cutoff_hz': self.get_parameter('speed_filter_cutoff_hz').get_parameter_value().double_value,
                 'position_filter_cutoff_hz': self.get_parameter('position_filter_cutoff_hz').get_parameter_value().double_value,
+                'heading_filter_cutoff_hz': self.get_parameter('heading_filter_cutoff_hz').get_parameter_value().double_value,
                 'filter_order': self.get_parameter('filter_order').get_parameter_value().integer_value,
                 'sampling_frequency_hz': self.get_parameter('sampling_frequency_hz').get_parameter_value().double_value,
                 'median_filter_window': self.get_parameter('median_filter_window').get_parameter_value().integer_value,
@@ -133,9 +146,17 @@ class TractorFilterNode(Node):
         except Exception as e:
             self.get_logger().error(f"Błąd podczas publikowania health status: {e}")
 
+    def normalize_heading(self, heading_deg):
+        """Normalizuje heading do zakresu 0-360 stopni."""
+        while heading_deg < 0:
+            heading_deg += 360
+        while heading_deg >= 360:
+            heading_deg -= 360
+        return heading_deg
+
     def listener_callback(self, msg):
         """Callback dla surowych danych GPS ciągnika."""
-        self.get_logger().debug(f'>>> Otrzymano dane GPS ciągnika! Prędkość surowa: {msg.speed_mps:.2f} m/s, Lat: {msg.latitude_deg:.8f}, Lon: {msg.longitude_deg:.8f}')
+        self.get_logger().debug(f'>>> Otrzymano dane GPS ciągnika! Prędkość surowa: {msg.speed_mps:.2f} m/s, Lat: {msg.latitude_deg:.8f}, Lon: {msg.longitude_deg:.8f}, Heading: {msg.heading_deg:.2f}°')
         
         # Sprawdź czy filtr medianowy jest włączony
         if self.median_filter_enabled:
@@ -143,11 +164,13 @@ class TractorFilterNode(Node):
             self.speed_buffer.append(msg.speed_mps)
             self.lat_buffer.append(msg.latitude_deg)
             self.lon_buffer.append(msg.longitude_deg)
+            self.heading_buffer.append(self.normalize_heading(msg.heading_deg))
             
             # Zastosuj filtr medianowy
             median_speed = np.median(list(self.speed_buffer))
             median_lat = np.median(list(self.lat_buffer))
             median_lon = np.median(list(self.lon_buffer))
+            median_heading = np.median(list(self.heading_buffer))
             
             # Filtruj prędkość (najpierw medianowy, potem Butterworth)
             filtered_speed, self.speed_zi = lfilter(self.speed_b, self.speed_a, [median_speed], zi=self.speed_zi)
@@ -155,6 +178,9 @@ class TractorFilterNode(Node):
             # Filtruj pozycję (najpierw medianowy, potem Butterworth)
             filtered_lat, self.lat_zi = lfilter(self.position_b, self.position_a, [median_lat], zi=self.lat_zi)
             filtered_lon, self.lon_zi = lfilter(self.position_b, self.position_a, [median_lon], zi=self.lon_zi)
+            
+            # Filtruj heading (najpierw medianowy, potem Butterworth)
+            filtered_heading, self.heading_zi = lfilter(self.heading_b, self.heading_a, [median_heading], zi=self.heading_zi)
         else:
             # Filtr medianowy wyłączony - używaj surowych danych
             # Filtruj prędkość (tylko Butterworth)
@@ -163,6 +189,9 @@ class TractorFilterNode(Node):
             # Filtruj pozycję (tylko Butterworth)
             filtered_lat, self.lat_zi = lfilter(self.position_b, self.position_a, [msg.latitude_deg], zi=self.lat_zi)
             filtered_lon, self.lon_zi = lfilter(self.position_b, self.position_a, [msg.longitude_deg], zi=self.lon_zi)
+            
+            # Filtruj heading (tylko Butterworth)
+            filtered_heading, self.heading_zi = lfilter(self.heading_b, self.heading_a, [self.normalize_heading(msg.heading_deg)], zi=self.heading_zi)
 
         # Stwórz nową wiadomość z przefiltrowanymi danymi
         filtered_msg = GpsRtk()
@@ -172,7 +201,7 @@ class TractorFilterNode(Node):
         filtered_msg.latitude_deg = filtered_lat[0]  # Filtrowana pozycja
         filtered_msg.longitude_deg = filtered_lon[0]  # Filtrowana pozycja
         filtered_msg.altitude_m = msg.altitude_m
-        filtered_msg.heading_deg = msg.heading_deg
+        filtered_msg.heading_deg = self.normalize_heading(filtered_heading[0])  # Filtrowany heading
         filtered_msg.speed_mps = filtered_speed[0]  # Filtrowana prędkość
 
         self.publisher_.publish(filtered_msg)
@@ -183,9 +212,9 @@ class TractorFilterNode(Node):
         
         # Logowanie z informacją o stanie filtra medianowego
         if self.median_filter_enabled:
-            self.get_logger().debug(f'Przefiltrowane dane ciągnika: Speed={filtered_speed[0]:.2f} m/s (median: {median_speed:.2f}), Lat={filtered_lat[0]:.8f}, Lon={filtered_lon[0]:.8f}')
+            self.get_logger().debug(f'Przefiltrowane dane ciągnika: Speed={filtered_speed[0]:.2f} m/s (median: {median_speed:.2f}), Lat={filtered_lat[0]:.8f}, Lon={filtered_lon[0]:.8f}, Heading={self.normalize_heading(filtered_heading[0]):.2f}° (median: {median_heading:.2f}°)')
         else:
-            self.get_logger().debug(f'Przefiltrowane dane ciągnika: Speed={filtered_speed[0]:.2f} m/s (raw: {msg.speed_mps:.2f}, median OFF), Lat={filtered_lat[0]:.8f}, Lon={filtered_lon[0]:.8f}')
+            self.get_logger().debug(f'Przefiltrowane dane ciągnika: Speed={filtered_speed[0]:.2f} m/s (raw: {msg.speed_mps:.2f}, median OFF), Lat={filtered_lat[0]:.8f}, Lon={filtered_lon[0]:.8f}, Heading={self.normalize_heading(filtered_heading[0]):.2f}° (raw: {msg.heading_deg:.2f}°, median OFF)')
 
 def main(args=None):
     rclpy.init(args=args)
