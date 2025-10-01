@@ -1,59 +1,3 @@
-# # mss_bringup/launch/all_nodes.launch.py
-
-# from launch import LaunchDescription
-# from launch_ros.actions import Node
-
-# def generate_launch_description():
-#     return LaunchDescription([
-#         Node(
-#             package='gps_rtk_reader',
-#             executable='gps_rtk_node',
-#             name='gps_rtk_node',
-#             output='screen',
-#             emulate_tty=True
-#         ),
-#         # Node(
-#         #     package='imu_reader',
-#         #     executable='imu_node',
-#         #     name='imu_publisher',
-#         #     output='screen',
-#         #     emulate_tty=True
-#         # ),
-#         Node(
-#             package='servo_controller',
-#             executable='servo_node',
-#             name='servo_controller',
-#             output='screen',
-#             emulate_tty=True
-#         ),
-#         Node(
-#             package='gear_controller',
-#             executable='gear_shifter',
-#             name='gear_shifter',
-#             output='screen',
-#             emulate_tty=True
-#         ),
-#         Node(
-#             package='speed_controller',
-#             executable='speed_filter_node',
-#             name='speed_filter_node',
-#             output='screen',
-#             emulate_tty=True,
-#         ),
-#         Node(
-#             package='gear_reader',
-#             executable='gear_reader_node',
-#             name='gear_reader_node',
-#             output='screen',
-#             emulate_tty=True,
-#         ),
-#     ])
-
-
-
-
-
-
 from launch import LaunchDescription
 from launch.actions import TimerAction
 from launch_ros.actions import Node
@@ -70,10 +14,17 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True
         ),
+        # Node(
+        #     package='bt_comm',
+        #     executable='bt_receiver_node',
+        #     name='bt_receiver_node',
+        #     output='screen',
+        #     emulate_tty=True
+        # ),
         Node(
-            package='bt_comm',
-            executable='bt_receiver_node',
-            name='bt_receiver_node',
+            package='mqtt_comm',
+            executable='mqtt_node',
+            name='mqtt_node',
             output='screen',
             emulate_tty=True
         ),
@@ -84,15 +35,6 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True,
         ),
-        # Odkomentuj, jeśli chcesz używać IMU
-        # Node(
-        #     package='imu_reader',
-        #     executable='imu_node',
-        #     name='imu_publisher',
-        #     output='screen',
-        #     emulate_tty=True
-        # ),
-
         # === Węzły wykonawcze (aktuatory) ===
         Node(
             package='servo_controller',
@@ -155,13 +97,13 @@ def generate_launch_description():
             emulate_tty=True,
             parameters=[{
                 'target_distance': 0.0,
-                'position_tolerance': 20.0,
-                'speed_tolerance': 10.0,
+                'position_tolerance': 5.0,
+                'speed_tolerance': 1,
                 'Kp': 1.0,
                 'Ki': 0.1,
                 'min_speed': 0.5,
                 'max_speed': 8.0,
-                'max_acceleration': 0.5,
+                'max_acceleration': 5.5,
                 'gps_timeout': 2.0,
                 'control_frequency': 10.0
             }]
