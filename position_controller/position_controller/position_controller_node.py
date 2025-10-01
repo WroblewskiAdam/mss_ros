@@ -7,7 +7,7 @@ from std_msgs.msg import Float64, String, Bool
 from std_srvs.srv import SetBool
 from rcl_interfaces.msg import SetParametersResult
 from rcl_interfaces.srv import SetParameters
-from my_robot_interfaces.msg import GpsRtk, DistanceMetrics
+from my_robot_interfaces.msg import GpsRtk, DistanceMetrics, Gear
 import time
 import math
 
@@ -19,8 +19,29 @@ class PositionControllerNode(Node):
         self.declare_parameter('target_distance', 0.0)  # m - docelowa odległość wzdłużna
         self.declare_parameter('position_tolerance', 1.0)  # m - tolerancja pozycji
         self.declare_parameter('speed_tolerance', 0.41)  # m/s - tolerancja prędkości (1 km/h)
-        self.declare_parameter('Kp', 1.0)  # wzmocnienie proporcjonalne
-        self.declare_parameter('Ki', 0.1)  # wzmocnienie całkujące
+        
+        # Parametry PID - domyślne (będą nadpisywane przez parametry dla półbiegów)
+        self.declare_parameter('Kp', 0.6)  # wzmocnienie proporcjonalne
+        self.declare_parameter('Ki', 0.0)  # wzmocnienie całkujące
+        self.declare_parameter('Kd', 0.0)  # wzmocnienie różniczkujące
+        
+        # Parametry PID dla poszczególnych półbiegów
+        self.declare_parameter('gear1_Kp', 1.2509)  # Półbieg 1 - wolny, stabilny
+        self.declare_parameter('gear1_Ki', 0.00)
+        self.declare_parameter('gear1_Kd', 1.1157)
+        
+        self.declare_parameter('gear2_Kp', 0.8075)  # Półbieg 2 - średni
+        self.declare_parameter('gear2_Ki', 0.0)
+        self.declare_parameter('gear2_Kd', 0.8178)
+        
+        self.declare_parameter('gear3_Kp', 1.2)  # Półbieg 3 - szybszy
+        self.declare_parameter('gear3_Ki', 0.15)
+        self.declare_parameter('gear3_Kd', 0.2)
+        
+        self.declare_parameter('gear4_Kp', 1.5)  # Półbieg 4 - najszybszy
+        self.declare_parameter('gear4_Ki', 0.2)
+        self.declare_parameter('gear4_Kd', 0.25)
+        
         self.declare_parameter('min_speed', 0.5)  # m/s - minimalna prędkość
         self.declare_parameter('max_speed', 8.0)  # m/s - maksymalna prędkość
         self.declare_parameter('max_acceleration', 0.5)  # m/s² - maksymalne przyspieszenie
@@ -31,8 +52,15 @@ class PositionControllerNode(Node):
         self.target_distance = self.get_parameter('target_distance').get_parameter_value().double_value
         self.position_tolerance = self.get_parameter('position_tolerance').get_parameter_value().double_value
         self.speed_tolerance = self.get_parameter('speed_tolerance').get_parameter_value().double_value
+        
+        # Parametry PID - domyślne
         self.Kp = self.get_parameter('Kp').get_parameter_value().double_value
         self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
+        self.Kd = self.get_parameter('Kd').get_parameter_value().double_value
+        
+        # Inicjalizuj parametry PID dla półbiegów
+        self.init_gear_pid_params()
+        
         self.min_speed = self.get_parameter('min_speed').get_parameter_value().double_value
         self.max_speed = self.get_parameter('max_speed').get_parameter_value().double_value
         self.max_acceleration = self.get_parameter('max_acceleration').get_parameter_value().double_value
@@ -45,14 +73,22 @@ class PositionControllerNode(Node):
         self.current_distance_longitudinal = 0.0  # Aktualna odległość wzdłużna
         self.tractor_speed = 0.0  # Prędkość ciągnika
         self.harvester_speed = 0.0  # Prędkość sieczkarni
-        self.integral_error = 0.0  # Błąd całkujący dla regulatora PI
+        
+        # Zmienne dla regulatora PID
+        self.integral_error = 0.0  # Błąd całkujący dla regulatora PID
+        self.previous_error = 0.0  # Poprzedni błąd dla członu różniczkującego
         self.last_target_speed = 0.0  # Ostatnia zadana prędkość
         self.last_control_time = time.time()  # Czas ostatniej regulacji
+        
+        # Stan biegów
+        self.current_gear = 0  # Aktualny półbieg (0-4)
+        self.clutch_pressed = False  # Stan sprzęgła
         
         # --- Timestamps dla timeoutów ---
         self.last_distance_update = time.time()
         self.last_tractor_gps_update = time.time()
         self.last_harvester_gps_update = time.time()
+        self.last_gear_update = time.time()
         
         # --- QoS ---
         default_qos = QoSProfile(
@@ -91,6 +127,14 @@ class PositionControllerNode(Node):
             default_qos
         )
         
+        # Subskrypcja stanu biegów
+        self.create_subscription(
+            Gear, 
+            '/gears', 
+            self.gear_callback, 
+            default_qos
+        )
+        
         # --- Publikacje ---
         self.target_speed_publisher = self.create_publisher(Float64, '/target_speed', default_qos)
         self.status_publisher = self.create_publisher(String, '/autopilot/status', default_qos)
@@ -122,8 +166,57 @@ class PositionControllerNode(Node):
         self.get_logger().info(f"Docelowa odległość: {self.target_distance} m")
         self.get_logger().info(f"Tolerancja pozycji: ±{self.position_tolerance} m")
         self.get_logger().info(f"Tolerancja prędkości: ±{self.speed_tolerance} m/s")
-        self.get_logger().info(f"Nastawy PI: Kp={self.Kp}, Ki={self.Ki}")
+        self.get_logger().info(f"Nastawy PID (domyślne): Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}")
         self.get_logger().info(f"Autopilot domyślnie WYŁĄCZONY")
+
+    def init_gear_pid_params(self):
+        """Inicjalizuje parametry PID dla każdego półbiegu."""
+        self.gear_pid_params = {}
+        
+        for gear in range(1, 5):  # Półbiegi 1-4
+            self.gear_pid_params[gear] = {
+                'Kp': self.get_parameter(f'gear{gear}_Kp').get_parameter_value().double_value,
+                'Ki': self.get_parameter(f'gear{gear}_Ki').get_parameter_value().double_value,
+                'Kd': self.get_parameter(f'gear{gear}_Kd').get_parameter_value().double_value
+            }
+        
+        self.get_logger().info("Parametry PID dla półbiegów:")
+        for gear, params in self.gear_pid_params.items():
+            self.get_logger().info(f"  Półbieg {gear}: Kp={params['Kp']:.3f}, Ki={params['Ki']:.3f}, Kd={params['Kd']:.3f}")
+
+    def update_pid_params_for_current_gear(self):
+        """Aktualizuje parametry PID na podstawie aktualnego półbiegu."""
+        if self.current_gear in self.gear_pid_params:
+            old_params = f"Kp={self.Kp:.3f}, Ki={self.Ki:.3f}, Kd={self.Kd:.3f}"
+            
+            self.Kp = self.gear_pid_params[self.current_gear]['Kp']
+            self.Ki = self.gear_pid_params[self.current_gear]['Ki']
+            self.Kd = self.gear_pid_params[self.current_gear]['Kd']
+            
+            new_params = f"Kp={self.Kp:.3f}, Ki={self.Ki:.3f}, Kd={self.Kd:.3f}"
+            self.get_logger().info(f"Zmiana parametrów PID dla półbiegu {self.current_gear}: {old_params} → {new_params}")
+            
+            # Reset integratora przy zmianie parametrów
+            self.integral_error = 0.0
+            self.previous_error = 0.0
+        else:
+            self.get_logger().warn(f"Brak parametrów PID dla półbiegu {self.current_gear}, używam domyślnych")
+
+    def gear_callback(self, msg):
+        """Odbiera stan biegów i sprzęgła."""
+        self.last_gear_update = time.time()
+        
+        old_gear = self.current_gear
+        self.current_gear = msg.gear
+        self.clutch_pressed = (msg.clutch_state == 1)
+        
+        # Sprawdź czy półbieg się zmienił
+        if old_gear != self.current_gear and self.current_gear > 0:
+            self.get_logger().info(f"Zmiana półbiegu: {old_gear} → {self.current_gear}")
+            self.update_pid_params_for_current_gear()
+        
+        if self.is_enabled:
+            self.get_logger().debug(f"Półbieg: {self.current_gear}, Sprzęgło: {'wciśnięte' if self.clutch_pressed else 'zwolnione'}")
 
     def update_parameter_and_variable(self, param_name, value, variable_name):
         """Aktualizuje zmienną wewnętrzną."""
@@ -143,12 +236,33 @@ class PositionControllerNode(Node):
                 self.update_parameter_and_variable('Kp', param.value, 'Kp')
             elif param.name == "Ki":
                 self.update_parameter_and_variable('Ki', param.value, 'Ki')
+            elif param.name == "Kd":
+                self.update_parameter_and_variable('Kd', param.value, 'Kd')
             elif param.name == "position_tolerance":
                 self.update_parameter_and_variable('position_tolerance', param.value, 'position_tolerance')
             elif param.name == "speed_tolerance":
                 self.update_parameter_and_variable('speed_tolerance', param.value, 'speed_tolerance')
             elif param.name == "target_distance":
                 self.update_parameter_and_variable('target_distance', param.value, 'target_distance')
+            # Obsługa parametrów dla półbiegów
+            elif param.name.startswith("gear") and param.name.endswith("_Kp"):
+                gear_num = int(param.name[4:5])
+                if gear_num in self.gear_pid_params:
+                    self.gear_pid_params[gear_num]['Kp'] = param.value
+                    if self.current_gear == gear_num:
+                        self.Kp = param.value
+            elif param.name.startswith("gear") and param.name.endswith("_Ki"):
+                gear_num = int(param.name[4:5])
+                if gear_num in self.gear_pid_params:
+                    self.gear_pid_params[gear_num]['Ki'] = param.value
+                    if self.current_gear == gear_num:
+                        self.Ki = param.value
+            elif param.name.startswith("gear") and param.name.endswith("_Kd"):
+                gear_num = int(param.name[4:5])
+                if gear_num in self.gear_pid_params:
+                    self.gear_pid_params[gear_num]['Kd'] = param.value
+                    if self.current_gear == gear_num:
+                        self.Kd = param.value
         return SetParametersResult(successful=True)
 
     def set_parameters_service_callback(self, request, response):
@@ -167,6 +281,9 @@ class PositionControllerNode(Node):
                 elif param_name == 'Ki':
                     if self.update_parameter_and_variable('Ki', param_value, 'Ki'):
                         success_count += 1
+                elif param_name == 'Kd':
+                    if self.update_parameter_and_variable('Kd', param_value, 'Kd'):
+                        success_count += 1
                 elif param_name == 'position_tolerance':
                     if self.update_parameter_and_variable('position_tolerance', param_value, 'position_tolerance'):
                         success_count += 1
@@ -176,6 +293,28 @@ class PositionControllerNode(Node):
                 elif param_name == 'target_distance':
                     if self.update_parameter_and_variable('target_distance', param_value, 'target_distance'):
                         success_count += 1
+                # Obsługa parametrów dla półbiegów
+                elif param_name.startswith('gear') and param_name.endswith('_Kp'):
+                    gear_num = int(param_name[4:5])
+                    if gear_num in self.gear_pid_params:
+                        self.gear_pid_params[gear_num]['Kp'] = param_value
+                        if self.current_gear == gear_num:
+                            self.Kp = param_value
+                        success_count += 1
+                elif param_name.startswith('gear') and param_name.endswith('_Ki'):
+                    gear_num = int(param_name[4:5])
+                    if gear_num in self.gear_pid_params:
+                        self.gear_pid_params[gear_num]['Ki'] = param_value
+                        if self.current_gear == gear_num:
+                            self.Ki = param_value
+                        success_count += 1
+                elif param_name.startswith('gear') and param_name.endswith('_Kd'):
+                    gear_num = int(param_name[4:5])
+                    if gear_num in self.gear_pid_params:
+                        self.gear_pid_params[gear_num]['Kd'] = param_value
+                        if self.current_gear == gear_num:
+                            self.Kd = param_value
+                        success_count += 1
                 else:
                     self.get_logger().warn(f"Nieznany parametr: {param_name}")
             
@@ -183,11 +322,11 @@ class PositionControllerNode(Node):
             response.results = []
             for param in request.parameters:
                 result = SetParametersResult()
-                result.successful = param.name in ['Kp', 'Ki', 'position_tolerance', 'speed_tolerance', 'target_distance'] and success_count > 0
+                result.successful = param.name in ['Kp', 'Ki', 'Kd', 'position_tolerance', 'speed_tolerance', 'target_distance'] or param.name.startswith('gear') and success_count > 0
                 response.results.append(result)
             
             if success_count == total_params:
-                self.get_logger().info(f"Wszystkie parametry zaktualizowane pomyślnie: Kp={self.Kp}, Ki={self.Ki}, position_tolerance={self.position_tolerance}, speed_tolerance={self.speed_tolerance}, target_distance={self.target_distance}")
+                self.get_logger().info(f"Wszystkie parametry zaktualizowane pomyślnie: Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, position_tolerance={self.position_tolerance}, speed_tolerance={self.speed_tolerance}, target_distance={self.target_distance}")
             else:
                 self.get_logger().warn(f"Zaktualizowano {success_count}/{total_params} parametrów")
                 
@@ -271,8 +410,8 @@ class PositionControllerNode(Node):
         else:
             return False, f"Pozycja: {position_ok}, Prędkość: {speed_ok}"
 
-    def calculate_pi_control(self, position_error, dt):
-        """Oblicza sygnał sterujący regulatora PI."""
+    def calculate_pid_control(self, position_error, dt):
+        """Oblicza sygnał sterujący regulatora PID."""
         # Człon proporcjonalny
         p_term = self.Kp * position_error
         
@@ -280,15 +419,27 @@ class PositionControllerNode(Node):
         self.integral_error += position_error * dt
         i_term = self.Ki * self.integral_error
         
+        # Człon różniczkujący
+        if dt > 0:
+            derivative_error = (position_error - self.previous_error) / dt
+            d_term = self.Kd * derivative_error
+        else:
+            d_term = 0.0
+        
         # Sygnał sterujący
-        control_signal = p_term + i_term
+        control_signal = p_term + i_term + d_term
+        
+        # Aktualizuj poprzedni błąd
+        self.previous_error = position_error
         
         # Zwróć szczegółowe informacje o członach
         return {
             'control_signal': control_signal,
             'p_term': p_term,
             'i_term': i_term,
-            'integral_error': self.integral_error
+            'd_term': d_term,
+            'integral_error': self.integral_error,
+            'derivative_error': derivative_error if dt > 0 else 0.0
         }
 
     def apply_anti_windup(self, target_speed, actual_speed, dt):
@@ -348,7 +499,8 @@ class PositionControllerNode(Node):
                 # Log nastaw regulatora przy aktywacji
                 self.get_logger().info(
                     f"NASTAWY REGULATORA POZYCJI: "
-                    f"Kp={self.Kp:.3f}, Ki={self.Ki:.3f}, "
+                    f"Kp={self.Kp:.3f}, Ki={self.Ki:.3f}, Kd={self.Kd:.3f}, "
+                    f"Półbieg={self.current_gear}, "
                     f"Tolerancja pozycji={self.position_tolerance:.2f}m, "
                     f"Tolerancja prędkości={self.speed_tolerance:.2f}m/s, "
                     f"Min prędkość={self.min_speed:.2f}m/s, "
@@ -358,15 +510,15 @@ class PositionControllerNode(Node):
         # Oblicz błąd pozycji
         position_error = self.target_distance - self.current_distance_longitudinal
         
-        # Oblicz dt dla regulatora PI
+        # Oblicz dt dla regulatora PID
         current_time = time.time()
         dt = current_time - self.last_control_time
         if dt <= 0:
             dt = 1.0 / self.control_frequency  # Fallback
         
-        # Oblicz sygnał sterujący PI
-        pi_result = self.calculate_pi_control(position_error, dt)
-        speed_correction = pi_result['control_signal']
+        # Oblicz sygnał sterujący PID
+        pid_result = self.calculate_pid_control(position_error, dt)
+        speed_correction = pid_result['control_signal']
         
         # Oblicz docelową prędkość z feed-forward
         target_speed = self.calculate_feedforward() + speed_correction
@@ -388,11 +540,13 @@ class PositionControllerNode(Node):
         # Publikuj status z szczegółowymi danymi regulacji
         detailed_status = (
             f"AKTYWNY: Błąd={position_error:.3f}m, "
-            f"P={pi_result['p_term']:.3f}m/s, "
-            f"I={pi_result['i_term']:.3f}m/s, "
-            f"Integral={pi_result['integral_error']:.3f}, "
+            f"P={pid_result['p_term']:.3f}m/s, "
+            f"I={pid_result['i_term']:.3f}m/s, "
+            f"D={pid_result['d_term']:.3f}m/s, "
+            f"Integral={pid_result['integral_error']:.3f}, "
             f"Korekta={speed_correction:.3f}m/s, "
-            f"Cel={target_speed:.3f}m/s"
+            f"Cel={target_speed:.3f}m/s, "
+            f"Półbieg={self.current_gear}"
         )
         self.publish_status("AKTYWNY", detailed_status)
 
@@ -411,6 +565,7 @@ class PositionControllerNode(Node):
             distance_timeout = current_time - self.last_distance_update > self.gps_timeout
             tractor_timeout = current_time - self.last_tractor_gps_update > self.gps_timeout
             harvester_timeout = current_time - self.last_harvester_gps_update > self.gps_timeout
+            gear_timeout = current_time - self.last_gear_update > self.gps_timeout
             
             # Przygotuj dane health
             health_data = {
@@ -419,10 +574,15 @@ class PositionControllerNode(Node):
                 'distance_timeout': distance_timeout,
                 'tractor_timeout': tractor_timeout,
                 'harvester_timeout': harvester_timeout,
+                'gear_timeout': gear_timeout,
                 'current_distance': self.current_distance_longitudinal,
                 'tractor_speed': self.tractor_speed,
                 'harvester_speed': self.harvester_speed,
-                'integral_error': self.integral_error
+                'current_gear': self.current_gear,
+                'clutch_pressed': self.clutch_pressed,
+                'pid_params': {'Kp': self.Kp, 'Ki': self.Ki, 'Kd': self.Kd},
+                'integral_error': self.integral_error,
+                'previous_error': self.previous_error
             }
             
             # Publikuj health
