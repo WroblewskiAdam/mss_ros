@@ -300,8 +300,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (positionSettingsBtn) {
         positionSettingsBtn.onclick = () => {
             positionModal.style.display = 'block';
-            // Inicjalizuj slajdery dla domyślnego półbiegu
-            updateSlidersForGear(1);
         };
     }
     if (positionCloseBtn) {
@@ -717,7 +715,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gearSelector) {
         gearSelector.onchange = () => {
             const selectedGear = parseInt(gearSelector.value);
-            updateSlidersForGear(selectedGear);
+            // Pobierz aktualne parametry z ROS2 dla wybranego półbiegu
+            updateSlidersFromParameters();
         };
     }
 
@@ -743,6 +742,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         Ki: parseFloat(positionKiSlider.value),
                         Kd: parseFloat(positionKdSlider.value)
                     };
+                    // NOWA FUNKCJA: Aktualizuj slajdery po zastosowaniu parametrów
+                    setTimeout(() => {
+                        updateSlidersFromParameters();
+                    }, 500);
                 } else {
                     showNotification('Błąd aktualizacji parametrów regulatora pozycji!', 'error');
                 }
