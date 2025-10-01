@@ -8,6 +8,11 @@ echo "=== MSS Web Interface Startup ==="
 echo "Data: $(date)"
 echo "================================"
 
+# Załaduj środowisko ROS2
+echo "🔧 Ładowanie środowiska ROS2..."
+source /opt/ros/jazzy/setup.bash
+echo "✅ Środowisko ROS2 załadowane"
+
 # Sprawdzanie czy jesteśmy w odpowiednim katalogu
 if [ ! -d "operator_interface/web" ]; then
     echo "BŁĄD: Nie jestem w katalogu src!"
@@ -57,7 +62,7 @@ if [ ! -z "$ROSBRIDGE_PIDS" ]; then
     # Sprawdź czy port 9090 jest wolny
     if lsof -i :9090 >/dev/null 2>&1; then
         echo "⚠️  Port 9090 nadal zajęty, próbuję force kill..."
-        sudo lsof -ti :9090 | xargs -r sudo kill -KILL
+        lsof -ti :9090 | xargs -r kill -KILL 2>/dev/null || true
         sleep 1
     fi
     
@@ -180,12 +185,26 @@ cleanup() {
     echo "🛑 Zatrzymywanie MSS Web Interface..."
     
     if [ ! -z "$ROSBRIDGE_PID" ]; then
-        kill $ROSBRIDGE_PID 2>/dev/null
+        echo "   Zatrzymywanie ROS Bridge (PID: $ROSBRIDGE_PID)..."
+        kill -TERM $ROSBRIDGE_PID 2>/dev/null
+        sleep 2
+        # Jeśli nadal żyje, force kill
+        if kill -0 $ROSBRIDGE_PID 2>/dev/null; then
+            echo "   Force kill ROS Bridge..."
+            kill -KILL $ROSBRIDGE_PID 2>/dev/null
+        fi
         echo "   ROS Bridge zatrzymany"
     fi
     
     if [ ! -z "$WEBSERVER_PID" ]; then
-        kill $WEBSERVER_PID 2>/dev/null
+        echo "   Zatrzymywanie Web server (PID: $WEBSERVER_PID)..."
+        kill -TERM $WEBSERVER_PID 2>/dev/null
+        sleep 1
+        # Jeśli nadal żyje, force kill
+        if kill -0 $WEBSERVER_PID 2>/dev/null; then
+            echo "   Force kill Web server..."
+            kill -KILL $WEBSERVER_PID 2>/dev/null
+        fi
         echo "   Web server zatrzymany"
     fi
     
@@ -195,12 +214,12 @@ cleanup() {
     # Sprawdź czy porty są wolne
     if lsof -i :9090 >/dev/null 2>&1; then
         echo "⚠️  Port 9090 nadal zajęty, force kill..."
-        sudo lsof -ti :9090 | xargs -r sudo kill -KILL
+        lsof -ti :9090 | xargs -r kill -KILL 2>/dev/null || true
     fi
     
     if lsof -i :8080 >/dev/null 2>&1; then
         echo "⚠️  Port 8080 nadal zajęty, force kill..."
-        sudo lsof -ti :8080 | xargs -r sudo kill -KILL
+        lsof -ti :8080 | xargs -r kill -KILL 2>/dev/null || true
     fi
     
     echo "✅ Wszystko zatrzymane"
@@ -208,7 +227,7 @@ cleanup() {
 }
 
 # Przechwyć sygnały i wykonaj cleanup
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
 # === GŁÓWNA PĘTLA ===
 
