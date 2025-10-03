@@ -18,7 +18,7 @@ class PositionControllerNode(Node):
         # --- Parametry konfiguracyjne ---
         self.declare_parameter('target_distance', 0.0)  # m - docelowa odległość wzdłużna
         self.declare_parameter('position_tolerance', 5.0)  # m - tolerancja pozycji
-        self.declare_parameter('speed_tolerance', 1)  # m/s - tolerancja prędkości (1 km/h)
+        self.declare_parameter('speed_tolerance', 1.5)  # m/s - tolerancja prędkości (1 km/h)
         
         # Parametry PID - domyślne (będą nadpisywane przez parametry dla półbiegów)
         self.declare_parameter('Kp', 0.6)  # wzmocnienie proporcjonalne
@@ -36,14 +36,25 @@ class PositionControllerNode(Node):
         
         self.declare_parameter('gear3_Kp', 0.8)  # Półbieg 3 - szybszy
         self.declare_parameter('gear3_Ki', 0.0)
-        self.declare_parameter('gear3_Kd', 0.0)
+        self.declare_parameter('gear3_Kd', 0.1)
         
         self.declare_parameter('gear4_Kp', 0.9)  # Półbieg 4 - najszybszy
         self.declare_parameter('gear4_Ki', 0.0)
-        self.declare_parameter('gear4_Kd', 0.0)
+        self.declare_parameter('gear4_Kd', 0.1)
         
-        self.declare_parameter('min_speed', 0.5)  # m/s - minimalna prędkość
-        self.declare_parameter('max_speed', 8.0)  # m/s - maksymalna prędkość
+        # Parametry max_speed dla każdego półbiegu w km/h (na podstawie Gear Manager z marginesem bezpieczeństwa)
+        self.declare_parameter('gear1_max_speed_kmh', 6.8)   # km/h (org: 8.4 km/h)
+        self.declare_parameter('gear2_max_speed_kmh', 8.0)  # km/h (org: 13.0 km/h)
+        self.declare_parameter('gear3_max_speed_kmh', 9.9)  # km/h (org: 16.8 km/h)
+        self.declare_parameter('gear4_max_speed_kmh', 11.5)  # km/h (org: 25.2 km/h)
+        #         # Parametry max_speed dla każdego półbiegu w km/h (na podstawie Gear Manager z marginesem bezpieczeństwa)
+        # self.declare_parameter('gear1_max_speed_kmh', 11.5)   # km/h (org: 8.4 km/h)
+        # self.declare_parameter('gear2_max_speed_kmh', 13.5)  # km/h (org: 13.0 km/h)
+        # self.declare_parameter('gear3_max_speed_kmh', 16.0)  # km/h (org: 16.8 km/h)
+        # self.declare_parameter('gear4_max_speed_kmh', 18.6)  # km/h (org: 25.2 km/h)
+        
+        self.declare_parameter('min_speed', 2.0)  # m/s - minimalna prędkość
+        self.declare_parameter('max_speed', 8.0)  # m/s - maksymalna prędkość (domyślna, nadpisywana przez gear_max_speeds)
         self.declare_parameter('max_acceleration', 0.5)  # m/s² - maksymalne przyspieszenie
         self.declare_parameter('gps_timeout', 2.0)  # s - timeout sygnału GPS
         self.declare_parameter('control_frequency', 10.0)  # Hz - częstotliwość regulacji
@@ -58,8 +69,15 @@ class PositionControllerNode(Node):
         self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
         self.Kd = self.get_parameter('Kd').get_parameter_value().double_value
         
+        # Stan biegów - musi być zainicjalizowany przed init_gear_max_speeds()
+        self.current_gear = 0  # Aktualny półbieg (0-4)
+        self.clutch_pressed = False  # Stan sprzęgła
+        
         # Inicjalizuj parametry PID dla półbiegów
         self.init_gear_pid_params()
+        
+        # Inicjalizuj parametry max_speed dla półbiegów
+        self.init_gear_max_speeds()
         
         self.min_speed = self.get_parameter('min_speed').get_parameter_value().double_value
         self.max_speed = self.get_parameter('max_speed').get_parameter_value().double_value
@@ -80,9 +98,6 @@ class PositionControllerNode(Node):
         self.last_target_speed = 0.0  # Ostatnia zadana prędkość
         self.last_control_time = time.time()  # Czas ostatniej regulacji
         
-        # Stan biegów
-        self.current_gear = 0  # Aktualny półbieg (0-4)
-        self.clutch_pressed = False  # Stan sprzęgła
         
         # --- Timestamps dla timeoutów ---
         self.last_distance_update = time.time()
@@ -167,6 +182,7 @@ class PositionControllerNode(Node):
         self.get_logger().info(f"Tolerancja pozycji: ±{self.position_tolerance} m")
         self.get_logger().info(f"Tolerancja prędkości: ±{self.speed_tolerance} m/s")
         self.get_logger().info(f"Nastawy PID (domyślne): Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}")
+        self.get_logger().info(f"Limity prędkości: min={self.min_speed:.1f}m/s, max={self.max_speed:.1f}m/s (aktywny dla biegu {self.current_gear})")
         self.get_logger().info(f"Autopilot domyślnie WYŁĄCZONY")
 
     def init_gear_pid_params(self):
@@ -181,6 +197,22 @@ class PositionControllerNode(Node):
             }
         
         self.get_logger().info("Parametry PID dla półbiegów zainicjalizowane")
+
+    def init_gear_max_speeds(self):
+        """Inicjalizuje parametry max_speed dla każdego półbiegu."""
+        self.gear_max_speeds = {}  # Przechowuje wartości w m/s
+        
+        for gear in range(1, 5):  # Półbiegi 1-4
+            # Pobierz wartość w km/h i konwertuj na m/s
+            speed_kmh = self.get_parameter(f'gear{gear}_max_speed_kmh').get_parameter_value().double_value
+            self.gear_max_speeds[gear] = speed_kmh / 3.6  # Konwersja km/h -> m/s
+        
+        # Ustaw aktualny max_speed na podstawie aktualnego biegu (domyślnie bieg 1)
+        if self.current_gear in self.gear_max_speeds:
+            self.max_speed = self.gear_max_speeds[self.current_gear]
+        
+        self.get_logger().info("Parametry max_speed dla półbiegów zainicjalizowane")
+        self.get_logger().info(f"Max speeds: Bieg1={self.gear_max_speeds[1]:.1f}m/s ({self.gear_max_speeds[1]*3.6:.1f}km/h), Bieg2={self.gear_max_speeds[2]:.1f}m/s ({self.gear_max_speeds[2]*3.6:.1f}km/h), Bieg3={self.gear_max_speeds[3]:.1f}m/s ({self.gear_max_speeds[3]*3.6:.1f}km/h), Bieg4={self.gear_max_speeds[4]:.1f}m/s ({self.gear_max_speeds[4]*3.6:.1f}km/h)")
 
     def update_pid_params_for_current_gear(self):
         """Aktualizuje parametry PID na podstawie aktualnego półbiegu."""
@@ -200,6 +232,22 @@ class PositionControllerNode(Node):
         else:
             self.get_logger().warn(f"Brak parametrów PID dla półbiegu {self.current_gear}, używam domyślnych")
 
+    def update_speed_limits_for_current_gear(self):
+        """Aktualizuje limity prędkości na podstawie aktualnego półbiegu."""
+        if self.current_gear in self.gear_max_speeds:
+            old_max = self.max_speed
+            self.max_speed = self.gear_max_speeds[self.current_gear]
+            
+            if abs(old_max - self.max_speed) > 0.01:  # Tylko jeśli zmiana jest znacząca
+                self.get_logger().info(
+                    f"Zmiana max_speed dla półbiegu {self.current_gear}: "
+                    f"{old_max:.2f} → {self.max_speed:.2f} m/s ({old_max*3.6:.1f} → {self.max_speed*3.6:.1f} km/h)"
+                )
+                # Reset integratora przy zmianie limitów prędkości
+                self.integral_error = 0.0
+        else:
+            self.get_logger().warn(f"Brak parametrów max_speed dla półbiegu {self.current_gear}, używam domyślnych")
+
     def gear_callback(self, msg):
         """Odbiera stan biegów i sprzęgła."""
         self.last_gear_update = time.time()
@@ -212,6 +260,7 @@ class PositionControllerNode(Node):
         if old_gear != self.current_gear and self.current_gear > 0:
             self.get_logger().info(f"Zmiana półbiegu: {old_gear} → {self.current_gear}")
             self.update_pid_params_for_current_gear()
+            self.update_speed_limits_for_current_gear()
         
         if self.is_enabled:
             self.get_logger().debug(f"Półbieg: {self.current_gear}, Sprzęgło: {'wciśnięte' if self.clutch_pressed else 'zwolnione'}")
@@ -272,16 +321,34 @@ class PositionControllerNode(Node):
                     if self.current_gear == gear_num:
                         self.Kd = param.value
                         self.get_logger().info(f"Zaktualizowano aktywny Kd dla półbiegu {gear_num}")
+            # Obsługa parametrów max_speed dla półbiegów (w km/h)
+            elif param.name.startswith("gear") and param.name.endswith("_max_speed_kmh"):
+                gear_num = int(param.name[4:5])
+                if gear_num in self.gear_max_speeds:
+                    old_value_ms = self.gear_max_speeds[gear_num]
+                    old_value_kmh = old_value_ms * 3.6
+                    new_value_ms = param.value / 3.6  # Konwersja km/h -> m/s
+                    self.gear_max_speeds[gear_num] = new_value_ms
+                    self.get_logger().info(f"Zmiana gear{gear_num}_max_speed_kmh: {old_value_kmh:.1f} → {param.value:.1f} km/h ({old_value_ms:.2f} → {new_value_ms:.2f} m/s)")
+                    if self.current_gear == gear_num:
+                        self.max_speed = new_value_ms
+                        self.get_logger().info(f"Zaktualizowano aktywny max_speed dla półbiegu {gear_num}: {param.value:.1f} km/h ({new_value_ms:.2f} m/s)")
+                        # Reset integratora przy zmianie max_speed
+                        self.integral_error = 0.0
         
         # Log aktualnych parametrów dla wszystkich półbiegów po zmianie
-        self.get_logger().info("=== AKTUALNE PARAMETRY PID DLA WSZYSTKICH PÓŁBIEGÓW ===")
+        self.get_logger().info("=== AKTUALNE PARAMETRY PID I MAX_SPEED DLA WSZYSTKICH PÓŁBIEGÓW ===")
         for gear in range(1, 5):
-            if gear in self.gear_pid_params:
-                params = self.gear_pid_params[gear]
+            if gear in self.gear_pid_params and gear in self.gear_max_speeds:
+                pid_params = self.gear_pid_params[gear]
+                max_speed = self.gear_max_speeds[gear]
                 active_marker = " [AKTYWNY]" if gear == self.current_gear else ""
-                self.get_logger().info(f"Półbieg {gear}: Kp={params['Kp']:.4f}, Ki={params['Ki']:.4f}, Kd={params['Kd']:.4f}{active_marker}")
+                self.get_logger().info(
+                    f"Półbieg {gear}: Kp={pid_params['Kp']:.4f}, Ki={pid_params['Ki']:.4f}, Kd={pid_params['Kd']:.4f}, "
+                    f"max_speed={max_speed:.2f}m/s ({max_speed*3.6:.1f}km/h){active_marker}"
+                )
         self.get_logger().info(f"Aktualnie aktywny półbieg: {self.current_gear}")
-        self.get_logger().info(f"Aktywne parametry: Kp={self.Kp:.4f}, Ki={self.Ki:.4f}, Kd={self.Kd:.4f}")
+        self.get_logger().info(f"Aktywne parametry: Kp={self.Kp:.4f}, Ki={self.Ki:.4f}, Kd={self.Kd:.4f}, max_speed={self.max_speed:.2f}m/s")
         self.get_logger().info("=== KONIEC ZMIANY PARAMETRÓW ===")
         
         return SetParametersResult(successful=True)
@@ -336,6 +403,18 @@ class PositionControllerNode(Node):
                         if self.current_gear == gear_num:
                             self.Kd = param_value
                         success_count += 1
+                # Obsługa parametrów max_speed dla półbiegów (w km/h)
+                elif param_name.startswith('gear') and param_name.endswith('_max_speed_kmh'):
+                    gear_num = int(param_name[4:5])
+                    if gear_num in self.gear_max_speeds:
+                        # Konwertuj km/h na m/s
+                        speed_ms = param_value / 3.6
+                        self.gear_max_speeds[gear_num] = speed_ms
+                        if self.current_gear == gear_num:
+                            self.max_speed = speed_ms
+                            # Reset integratora przy zmianie max_speed
+                            self.integral_error = 0.0
+                        success_count += 1
                 else:
                     self.get_logger().warn(f"Nieznany parametr: {param_name}")
             
@@ -343,7 +422,11 @@ class PositionControllerNode(Node):
             response.results = []
             for param in request.parameters:
                 result = SetParametersResult()
-                result.successful = param.name in ['Kp', 'Ki', 'Kd', 'position_tolerance', 'speed_tolerance', 'target_distance'] or param.name.startswith('gear') and success_count > 0
+                result.successful = (
+                    param.name in ['Kp', 'Ki', 'Kd', 'position_tolerance', 'speed_tolerance', 'target_distance'] or 
+                    (param.name.startswith('gear') and ('_Kp' in param.name or '_Ki' in param.name or '_Kd' in param.name or '_max_speed_kmh' in param.name)) and 
+                    success_count > 0
+                )
                 response.results.append(result)
             
             if success_count == total_params:
@@ -351,14 +434,18 @@ class PositionControllerNode(Node):
                 self.get_logger().info(f"Parametry globalne: Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, position_tolerance={self.position_tolerance}, speed_tolerance={self.speed_tolerance}, target_distance={self.target_distance}")
                 
                 # Log nastaw dla wszystkich półbiegów
-                self.get_logger().info("=== NASTAWY PID DLA WSZYSTKICH PÓŁBIEGÓW ===")
+                self.get_logger().info("=== NASTAWY PID I MAX_SPEED DLA WSZYSTKICH PÓŁBIEGÓW ===")
                 for gear in range(1, 5):
-                    if gear in self.gear_pid_params:
-                        params = self.gear_pid_params[gear]
+                    if gear in self.gear_pid_params and gear in self.gear_max_speeds:
+                        pid_params = self.gear_pid_params[gear]
+                        max_speed = self.gear_max_speeds[gear]
                         active_marker = " [AKTYWNY]" if gear == self.current_gear else ""
-                        self.get_logger().info(f"Półbieg {gear}: Kp={params['Kp']:.4f}, Ki={params['Ki']:.4f}, Kd={params['Kd']:.4f}{active_marker}")
+                        self.get_logger().info(
+                            f"Półbieg {gear}: Kp={pid_params['Kp']:.4f}, Ki={pid_params['Ki']:.4f}, Kd={pid_params['Kd']:.4f}, "
+                            f"max_speed={max_speed:.2f}m/s ({max_speed*3.6:.1f}km/h){active_marker}"
+                        )
                 self.get_logger().info(f"Aktualnie aktywny półbieg: {self.current_gear}")
-                self.get_logger().info(f"Aktywne parametry: Kp={self.Kp:.4f}, Ki={self.Ki:.4f}, Kd={self.Kd:.4f}")
+                self.get_logger().info(f"Aktywne parametry: Kp={self.Kp:.4f}, Ki={self.Ki:.4f}, Kd={self.Kd:.4f}, max_speed={self.max_speed:.2f}m/s")
                 self.get_logger().info("=== KONIEC AKTUALIZACJI PARAMETRÓW ===")
             else:
                 self.get_logger().warn(f"Zaktualizowano {success_count}/{total_params} parametrów")
@@ -441,7 +528,7 @@ class PositionControllerNode(Node):
         if position_ok and speed_ok:
             return True, "Warunki spełnione"
         else:
-            return False, f"Pozycja: {position_ok}, Prędkość: {speed_ok}"
+            return False, f"Pozycja: {position_ok},current_distance_longitudinal: {self.current_distance_longitudinal}, Prędkość: {speed_ok},harvester_speed: {self.harvester_speed}, tractor_speed: {self.tractor_speed}"
 
     def calculate_pid_control(self, position_error, dt):
         """Oblicza sygnał sterujący regulatora PID."""
@@ -560,7 +647,7 @@ class PositionControllerNode(Node):
         target_speed = self.apply_limits(target_speed)
         
         # Zastosuj anti-windup na końcowej prędkości
-        self.apply_anti_windup(target_speed, self.tractor_speed, dt)
+        # self.apply_anti_windup(target_speed, self.tractor_speed, dt)
         
         # Aktualizuj czas ostatniej regulacji
         self.last_control_time = current_time
