@@ -26,11 +26,15 @@ class RelativeComputerNode(Node):
         self.declare_parameter('chopper_gps_topic', '/gps_rtk_data/chopper_filtered')
         self.declare_parameter('distance_metrics_topic', '/distance_metrics')
         self.declare_parameter('earth_radius_m', 6371000.0)
+        self.declare_parameter('tractor_longitudinal_offset_m', 6.4)
+        self.declare_parameter('chopper_longitudinal_offset_m', 0.6)
 
         tractor_topic = self.get_parameter('tractor_gps_topic').get_parameter_value().string_value
         chopper_topic = self.get_parameter('chopper_gps_topic').get_parameter_value().string_value
         metrics_topic = self.get_parameter('distance_metrics_topic').get_parameter_value().string_value
         self.R_EARTH = self.get_parameter('earth_radius_m').get_parameter_value().double_value
+        self.tractor_longitudinal_offset_m = self.get_parameter('tractor_longitudinal_offset_m').get_parameter_value().double_value
+        self.chopper_longitudinal_offset_m = self.get_parameter('chopper_longitudinal_offset_m').get_parameter_value().double_value
 
         self.origin_lat_rad = None
         self.origin_lon_rad = None
@@ -83,13 +87,15 @@ class RelativeComputerNode(Node):
         tractor_pos_enu = self.latlon_to_enu(tractor_msg.latitude_deg, tractor_msg.longitude_deg)
         chopper_pos_enu = self.latlon_to_enu(chopper_msg.latitude_deg, chopper_msg.longitude_deg)
 
+        heading_rad = np.deg2rad(heading_to_use_deg)
+        chopper_heading_vector = np.array([np.sin(heading_rad), np.cos(heading_rad)])
+
+        # Oblicz wektor między antenami i koryguj tylko składową wzdłużną o offsety
         vector_chopper_to_tractor = tractor_pos_enu - chopper_pos_enu
         dist_straight = np.linalg.norm(vector_chopper_to_tractor)
 
-        heading_rad = np.deg2rad(heading_to_use_deg)
-        chopper_heading_vector = np.array([np.sin(heading_rad), np.cos(heading_rad)])
-        
-        dist_longitudinal = np.dot(vector_chopper_to_tractor, chopper_heading_vector)
+        dist_longitudinal_raw = np.dot(vector_chopper_to_tractor, chopper_heading_vector)
+        dist_longitudinal = dist_longitudinal_raw + (self.chopper_longitudinal_offset_m - self.tractor_longitudinal_offset_m)
         dist_lateral = np.cross(chopper_heading_vector, vector_chopper_to_tractor)
 
         metrics_msg = DistanceMetrics()
