@@ -78,8 +78,10 @@ class MSSDataLoggerNode(Node):
         self.get_logger().info("MSS Data Logger zainicjalizowany - oczekiwanie na włączenie logowania")
         
         # --- Zmienne do przechowywania ostatnich wiadomości ---
-        self.last_tractor_gps: Optional[GpsRtk] = None
-        self.last_chopper_gps: Optional[GpsRtk] = None
+        self.last_tractor_gps_raw: Optional[GpsRtk] = None
+        self.last_tractor_gps_filtered: Optional[GpsRtk] = None
+        self.last_chopper_gps_raw: Optional[GpsRtk] = None
+        self.last_chopper_gps_filtered: Optional[GpsRtk] = None
         self.last_servo_position: Optional[StampedInt32] = None
         self.last_gear: Optional[Gear] = None
         self.last_distance_metrics: Optional[DistanceMetrics] = None
@@ -105,19 +107,35 @@ class MSSDataLoggerNode(Node):
         )
         
         # --- Subskrypcje ---
-        # Dane z ciągnika (filtrowane)
-        self.tractor_gps_subscription = self.create_subscription(
+        # Dane z ciągnika (surowe)
+        self.tractor_gps_raw_subscription = self.create_subscription(
             GpsRtk,
-            '/gps_rtk_data/tractor_filtered',
-            self.tractor_gps_callback,
+            '/gps_rtk_data/tractor',
+            self.tractor_gps_raw_callback,
             qos_profile
         )
         
-        # Dane z sieczkarni
-        self.chopper_gps_subscription = self.create_subscription(
+        # Dane z ciągnika (przefiltrowane)
+        self.tractor_gps_filtered_subscription = self.create_subscription(
+            GpsRtk,
+            '/gps_rtk_data/tractor_filtered',
+            self.tractor_gps_filtered_callback,
+            qos_profile
+        )
+        
+        # Dane z sieczkarni (surowe)
+        self.chopper_gps_raw_subscription = self.create_subscription(
             GpsRtk,
             '/gps_rtk_data/chopper',
-            self.chopper_gps_callback,
+            self.chopper_gps_raw_callback,
+            qos_profile
+        )
+        
+        # Dane z sieczkarni (przefiltrowane)
+        self.chopper_gps_filtered_subscription = self.create_subscription(
+            GpsRtk,
+            '/gps_rtk_data/chopper_filtered',
+            self.chopper_gps_filtered_callback,
             qos_profile
         )
         
@@ -193,13 +211,21 @@ class MSSDataLoggerNode(Node):
         
         self.get_logger().info("MSS Data Logger zainicjalizowany - zbieranie danych z całego systemu")
     
-    def tractor_gps_callback(self, msg: GpsRtk):
-        """Callback dla danych GPS ciągnika"""
-        self.last_tractor_gps = msg
+    def tractor_gps_raw_callback(self, msg: GpsRtk):
+        """Callback dla surowych danych GPS ciągnika"""
+        self.last_tractor_gps_raw = msg
     
-    def chopper_gps_callback(self, msg: GpsRtk):
-        """Callback dla danych GPS sieczkarni"""
-        self.last_chopper_gps = msg
+    def tractor_gps_filtered_callback(self, msg: GpsRtk):
+        """Callback dla przefiltrowanych danych GPS ciągnika"""
+        self.last_tractor_gps_filtered = msg
+    
+    def chopper_gps_raw_callback(self, msg: GpsRtk):
+        """Callback dla surowych danych GPS sieczkarni"""
+        self.last_chopper_gps_raw = msg
+    
+    def chopper_gps_filtered_callback(self, msg: GpsRtk):
+        """Callback dla przefiltrowanych danych GPS sieczkarni"""
+        self.last_chopper_gps_filtered = msg
     
     def servo_position_callback(self, msg: StampedInt32):
         """Callback dla pozycji serwa"""
@@ -274,8 +300,10 @@ class MSSDataLoggerNode(Node):
         current_time = time.time()
         
         # Użyj timestamp z ciągnika jeśli dostępny, w przeciwnym razie systemowy
-        if self.last_tractor_gps:
-            timestamp = self.last_tractor_gps.header.stamp
+        if self.last_tractor_gps_raw:
+            timestamp = self.last_tractor_gps_raw.header.stamp
+        elif self.last_tractor_gps_filtered:
+            timestamp = self.last_tractor_gps_filtered.header.stamp
         else:
             # Fallback timestamp
             from builtin_interfaces.msg import Time
@@ -283,35 +311,61 @@ class MSSDataLoggerNode(Node):
             timestamp.sec = int(current_time)
             timestamp.nanosec = int((current_time - int(current_time)) * 1e9)
         
-        # Dane z ciągnika (z placeholderami jeśli brak)
-        if self.last_tractor_gps:
-            tractor_lat = self.last_tractor_gps.latitude_deg
-            tractor_lon = self.last_tractor_gps.longitude_deg
-            tractor_speed = self.last_tractor_gps.speed_mps
-            tractor_heading = self.last_tractor_gps.heading_deg
-            tractor_rtk_status = self.last_tractor_gps.rtk_status
+        # Dane z ciągnika (surowe i przefiltrowane)
+        if self.last_tractor_gps_raw:
+            tractor_lat_raw = self.last_tractor_gps_raw.latitude_deg
+            tractor_lon_raw = self.last_tractor_gps_raw.longitude_deg
+            tractor_speed_raw = self.last_tractor_gps_raw.speed_mps
+            tractor_heading_raw = self.last_tractor_gps_raw.heading_deg
+            tractor_rtk_status_raw = self.last_tractor_gps_raw.rtk_status
         else:
-            tractor_lat = self.PLACEHOLDER_FLOAT
-            tractor_lon = self.PLACEHOLDER_FLOAT
-            tractor_speed = self.PLACEHOLDER_FLOAT
-            tractor_heading = self.PLACEHOLDER_FLOAT
-            tractor_rtk_status = self.PLACEHOLDER_UINT8
+            tractor_lat_raw = self.PLACEHOLDER_FLOAT
+            tractor_lon_raw = self.PLACEHOLDER_FLOAT
+            tractor_speed_raw = self.PLACEHOLDER_FLOAT
+            tractor_heading_raw = self.PLACEHOLDER_FLOAT
+            tractor_rtk_status_raw = self.PLACEHOLDER_UINT8
         
-        # Dane z sieczkarni (z placeholderami jeśli brak)
-        if self.last_chopper_gps:
-            chopper_lat = self.last_chopper_gps.latitude_deg
-            chopper_lon = self.last_chopper_gps.longitude_deg
-            chopper_speed = self.last_chopper_gps.speed_mps
-            chopper_heading = self.last_chopper_gps.heading_deg
-            chopper_rtk_status = self.last_chopper_gps.rtk_status
+        if self.last_tractor_gps_filtered:
+            tractor_lat_filtered = self.last_tractor_gps_filtered.latitude_deg
+            tractor_lon_filtered = self.last_tractor_gps_filtered.longitude_deg
+            tractor_speed_filtered = self.last_tractor_gps_filtered.speed_mps
+            tractor_heading_filtered = self.last_tractor_gps_filtered.heading_deg
+            tractor_rtk_status_filtered = self.last_tractor_gps_filtered.rtk_status
+        else:
+            tractor_lat_filtered = self.PLACEHOLDER_FLOAT
+            tractor_lon_filtered = self.PLACEHOLDER_FLOAT
+            tractor_speed_filtered = self.PLACEHOLDER_FLOAT
+            tractor_heading_filtered = self.PLACEHOLDER_FLOAT
+            tractor_rtk_status_filtered = self.PLACEHOLDER_UINT8
+        
+        # Dane z sieczkarni (surowe i przefiltrowane)
+        if self.last_chopper_gps_raw:
+            chopper_lat_raw = self.last_chopper_gps_raw.latitude_deg
+            chopper_lon_raw = self.last_chopper_gps_raw.longitude_deg
+            chopper_speed_raw = self.last_chopper_gps_raw.speed_mps
+            chopper_heading_raw = self.last_chopper_gps_raw.heading_deg
+            chopper_rtk_status_raw = self.last_chopper_gps_raw.rtk_status
             bt_status = True
         else:
-            chopper_lat = self.PLACEHOLDER_FLOAT
-            chopper_lon = self.PLACEHOLDER_FLOAT
-            chopper_speed = self.PLACEHOLDER_FLOAT
-            chopper_heading = self.PLACEHOLDER_FLOAT
-            chopper_rtk_status = self.PLACEHOLDER_UINT8
+            chopper_lat_raw = self.PLACEHOLDER_FLOAT
+            chopper_lon_raw = self.PLACEHOLDER_FLOAT
+            chopper_speed_raw = self.PLACEHOLDER_FLOAT
+            chopper_heading_raw = self.PLACEHOLDER_FLOAT
+            chopper_rtk_status_raw = self.PLACEHOLDER_UINT8
             bt_status = False
+        
+        if self.last_chopper_gps_filtered:
+            chopper_lat_filtered = self.last_chopper_gps_filtered.latitude_deg
+            chopper_lon_filtered = self.last_chopper_gps_filtered.longitude_deg
+            chopper_speed_filtered = self.last_chopper_gps_filtered.speed_mps
+            chopper_heading_filtered = self.last_chopper_gps_filtered.heading_deg
+            chopper_rtk_status_filtered = self.last_chopper_gps_filtered.rtk_status
+        else:
+            chopper_lat_filtered = self.PLACEHOLDER_FLOAT
+            chopper_lon_filtered = self.PLACEHOLDER_FLOAT
+            chopper_speed_filtered = self.PLACEHOLDER_FLOAT
+            chopper_heading_filtered = self.PLACEHOLDER_FLOAT
+            chopper_rtk_status_filtered = self.PLACEHOLDER_UINT8
         
         # Dane z serwa (z placeholderami jeśli brak)
         if self.last_servo_position:
@@ -366,15 +420,15 @@ class MSSDataLoggerNode(Node):
             # Czas
             timestamp.sec, timestamp.nanosec, current_time,
             
-            # Pozycja ciągnika (surowe i przefiltrowane - używamy przefiltrowanych)
-            tractor_lat, tractor_lon,
-            tractor_lat, tractor_lon,
+            # Pozycja ciągnika (surowe i przefiltrowane)
+            tractor_lat_raw, tractor_lon_raw,
+            tractor_lat_filtered, tractor_lon_filtered,
             
-            # Prędkość ciągnika (surowe i przefiltrowane - używamy przefiltrowanych)
-            tractor_speed, tractor_speed,
+            # Prędkość ciągnika (surowe i przefiltrowane)
+            tractor_speed_raw, tractor_speed_filtered,
             
-            # Heading i status RTK ciągnika
-            tractor_heading, tractor_rtk_status,
+            # Heading i status RTK ciągnika (używamy przefiltrowanych)
+            tractor_heading_filtered, tractor_rtk_status_filtered,
             
             # Biegi i sprzęgło
             tractor_gear, tractor_clutch_state,
@@ -389,11 +443,11 @@ class MSSDataLoggerNode(Node):
             # Pozycja względna
             distance_longitudinal, distance_lateral, distance_straight,
             
-            # Sieczkarnia (surowe i przefiltrowane - używamy surowych)
-            chopper_lat, chopper_lon,
-            chopper_lat, chopper_lon,
-            chopper_speed, chopper_speed,
-            chopper_heading, chopper_rtk_status,
+            # Sieczkarnia (surowe i przefiltrowane)
+            chopper_lat_raw, chopper_lon_raw,
+            chopper_lat_filtered, chopper_lon_filtered,
+            chopper_speed_raw, chopper_speed_filtered,
+            chopper_heading_filtered, chopper_rtk_status_filtered,
             
             # Status systemu
             1 if bt_status else 0, autopilot_status

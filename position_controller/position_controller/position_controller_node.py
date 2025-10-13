@@ -53,7 +53,7 @@ class PositionControllerNode(Node):
         # self.declare_parameter('gear3_max_speed_kmh', 16.0)  # km/h (org: 16.8 km/h)
         # self.declare_parameter('gear4_max_speed_kmh', 18.6)  # km/h (org: 25.2 km/h)
         
-        self.declare_parameter('min_speed', 2.0)  # m/s - minimalna prędkość
+        self.declare_parameter('min_speed', 0.5)  # m/s - minimalna prędkość
         self.declare_parameter('max_speed', 8.0)  # m/s - maksymalna prędkość (domyślna, nadpisywana przez gear_max_speeds)
         self.declare_parameter('max_acceleration', 0.5)  # m/s² - maksymalne przyspieszenie
         self.declare_parameter('gps_timeout', 2.0)  # s - timeout sygnału GPS
