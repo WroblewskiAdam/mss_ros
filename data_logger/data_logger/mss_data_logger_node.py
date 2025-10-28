@@ -55,7 +55,7 @@ class MSSDataLoggerNode(Node):
             'tractor_gear', 'tractor_clutch_state',
             
             # Serwo
-            'servo_position',
+            'servo_target_positon','servo_position',
             
             # Regulatory
             'speed_controller_enabled', 'target_speed',
@@ -83,6 +83,7 @@ class MSSDataLoggerNode(Node):
         self.last_chopper_gps_raw: Optional[GpsRtk] = None
         self.last_chopper_gps_filtered: Optional[GpsRtk] = None
         self.last_servo_position: Optional[StampedInt32] = None
+        self.last_servo_target_position: Optional[StampedInt32] = None
         self.last_gear: Optional[Gear] = None
         self.last_distance_metrics: Optional[DistanceMetrics] = None
         self.last_speed_controller_state: Optional[SpeedControllerState] = None
@@ -144,6 +145,14 @@ class MSSDataLoggerNode(Node):
             StampedInt32,
             '/servo/position',
             self.servo_position_callback,
+            qos_profile
+        )
+
+         # Pozycja zadana serwa
+        self.servo_target_position_subscription = self.create_subscription(
+            StampedInt32,
+            '/servo/set_angle',
+            self.servo_target_position_callback,
             qos_profile
         )
         
@@ -230,6 +239,10 @@ class MSSDataLoggerNode(Node):
     def servo_position_callback(self, msg: StampedInt32):
         """Callback dla pozycji serwa"""
         self.last_servo_position = msg
+
+    def servo_target_position_callback(self, msg: StampedInt32):
+        """Callback dla pozycji serwa"""
+        self.last_servo_target_position = msg
     
     def gear_callback(self, msg: Gear):
         """Callback dla biegów i sprzęgła"""
@@ -373,6 +386,12 @@ class MSSDataLoggerNode(Node):
         else:
             servo_position = self.PLACEHOLDER_INT
         
+         # Dane z serwa (z placeholderami jeśli brak)
+        if self.last_servo_target_position:
+            servo_target_position = self.last_servo_target_position.data
+        else:
+            servo_target_position = self.PLACEHOLDER_INT
+        
         # Dane z biegów (z placeholderami jeśli brak)
         if self.last_gear:
             tractor_gear = self.last_gear.gear
@@ -434,7 +453,7 @@ class MSSDataLoggerNode(Node):
             tractor_gear, tractor_clutch_state,
             
             # Serwo
-            servo_position,
+            servo_target_position, servo_position,
             
             # Regulatory
             speed_controller_enabled, target_speed,
