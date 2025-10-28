@@ -23,6 +23,7 @@ setup(
             'speed_controller_node = speed_controller.speed_controller_node:main',
             'speed_teleop_node = speed_controller.speed_teleop_node:main',
             'prbs_generator_node = speed_controller.prbs_generator_node:main',
+            'random_signal_generator = speed_controller.random_signal_generator:main',
         ],
     },
 )
