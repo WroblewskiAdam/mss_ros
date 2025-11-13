@@ -26,28 +26,48 @@ class SpeedControllerNode(Node):
         self.declare_parameter('ki', 40.50)
         self.declare_parameter('kd', 0.00)
         
-        # Nastawy dla półbiegu 1 (sub_gear_1)
-        self.declare_parameter('sub_gear_1_kp', 35.0)
-        self.declare_parameter('sub_gear_1_ki', 70.0)
+        # # Nastawy dla półbiegu 1 (sub_gear_1)
+        # self.declare_parameter('sub_gear_1_kp', 35.0)
+        # self.declare_parameter('sub_gear_1_ki', 70.0)
+        # self.declare_parameter('sub_gear_1_kd', 0.0)
+        
+        # # Nastawy dla półbiegu 2 (sub_gear_2)
+        # self.declare_parameter('sub_gear_2_kp', 35.0)
+        # self.declare_parameter('sub_gear_2_ki', 70.0)
+        # self.declare_parameter('sub_gear_2_kd', 0.0)
+        
+        # # Nastawy dla półbiegu 3 (sub_gear_3)
+        # self.declare_parameter('sub_gear_3_kp', 30.00)
+        # self.declare_parameter('sub_gear_3_ki', 60.00)
+        # self.declare_parameter('sub_gear_3_kd', 0.00)
+        
+        # # Nastawy dla półbiegu 4 (sub_gear_4)
+        # self.declare_parameter('sub_gear_4_kp', 30.0)
+        # self.declare_parameter('sub_gear_4_ki', 60.0)
+        # self.declare_parameter('sub_gear_4_kd', 0.00)
+
+         # Nastawy dla półbiegu 1 (sub_gear_1)
+        self.declare_parameter('sub_gear_1_kp', 27.2)
+        self.declare_parameter('sub_gear_1_ki', 81.5)
         self.declare_parameter('sub_gear_1_kd', 0.0)
         
         # Nastawy dla półbiegu 2 (sub_gear_2)
-        self.declare_parameter('sub_gear_2_kp', 35.0)
-        self.declare_parameter('sub_gear_2_ki', 70.0)
+        self.declare_parameter('sub_gear_2_kp', 27.25)
+        self.declare_parameter('sub_gear_2_ki', 76.0)
         self.declare_parameter('sub_gear_2_kd', 0.0)
         
         # Nastawy dla półbiegu 3 (sub_gear_3)
-        self.declare_parameter('sub_gear_3_kp', 30.00)
-        self.declare_parameter('sub_gear_3_ki', 60.00)
+        self.declare_parameter('sub_gear_3_kp', 23.5)
+        self.declare_parameter('sub_gear_3_ki', 60.25)
         self.declare_parameter('sub_gear_3_kd', 0.00)
         
         # Nastawy dla półbiegu 4 (sub_gear_4)
-        self.declare_parameter('sub_gear_4_kp', 30.0)
-        self.declare_parameter('sub_gear_4_ki', 60.0)
+        self.declare_parameter('sub_gear_4_kp', 28.75)
+        self.declare_parameter('sub_gear_4_ki', 56.25)
         self.declare_parameter('sub_gear_4_kd', 0.00)
         
         # Pozostałe parametry bez zmian
-        self.declare_parameter('v_idle', 1.3359)
+        self.declare_parameter('v_idle', 0.7)
         self.declare_parameter('servo_min_angle', 0)
         self.declare_parameter('servo_max_angle', 150)
         self.declare_parameter('controller_frequency', 20.0)
