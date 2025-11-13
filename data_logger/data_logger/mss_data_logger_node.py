@@ -206,7 +206,7 @@ class MSSDataLoggerNode(Node):
         )
         
         # Timer do zapisu danych (10 Hz)
-        self.log_timer = self.create_timer(0.1, self.log_data)
+        self.log_timer = self.create_timer(0.05, self.log_data)
         
         # Serwis do włączania/wyłączania logowania
         self.set_enabled_service = self.create_service(
