@@ -26,27 +26,27 @@ class PositionControllerNode(Node):
         self.declare_parameter('Kd', 0.0)  # wzmocnienie różniczkujące
         
         # Parametry PID dla poszczególnych półbiegów
-        self.declare_parameter('gear1_Kp', 0.8)  # Półbieg 1 - wolny, stabilny
+        self.declare_parameter('gear1_Kp', 0.36)  # Półbieg 1 - wolny, stabilny
         self.declare_parameter('gear1_Ki', 0.00)
-        self.declare_parameter('gear1_Kd', 0.1)
+        self.declare_parameter('gear1_Kd', 0.0)
         
-        self.declare_parameter('gear2_Kp', 0.73)  # Półbieg 2 - średni
+        self.declare_parameter('gear2_Kp', 0.37)  # Półbieg 2 - średni
         self.declare_parameter('gear2_Ki', 0.0)
-        self.declare_parameter('gear2_Kd', 0.24)
+        self.declare_parameter('gear2_Kd', 0.0)
         
-        self.declare_parameter('gear3_Kp', 0.8)  # Półbieg 3 - szybszy
+        self.declare_parameter('gear3_Kp', 0.37)  # Półbieg 3 - szybszy
         self.declare_parameter('gear3_Ki', 0.0)
-        self.declare_parameter('gear3_Kd', 0.1)
+        self.declare_parameter('gear3_Kd', 0.0)
         
-        self.declare_parameter('gear4_Kp', 0.9)  # Półbieg 4 - najszybszy
+        self.declare_parameter('gear4_Kp', 0.45)  # Półbieg 4 - najszybszy
         self.declare_parameter('gear4_Ki', 0.0)
-        self.declare_parameter('gear4_Kd', 0.1)
+        self.declare_parameter('gear4_Kd', 0.0)
         
         # Parametry max_speed dla każdego półbiegu w km/h (na podstawie Gear Manager z marginesem bezpieczeństwa)
-        self.declare_parameter('gear1_max_speed_kmh', 6.8)   # km/h (org: 8.4 km/h)
-        self.declare_parameter('gear2_max_speed_kmh', 8.0)  # km/h (org: 13.0 km/h)
-        self.declare_parameter('gear3_max_speed_kmh', 9.9)  # km/h (org: 16.8 km/h)
-        self.declare_parameter('gear4_max_speed_kmh', 11.5)  # km/h (org: 25.2 km/h)
+        self.declare_parameter('gear1_max_speed_kmh', 7.5)   # km/h (org: 8.4 km/h)
+        self.declare_parameter('gear2_max_speed_kmh', 8.7)  # km/h (org: 13.0 km/h)
+        self.declare_parameter('gear3_max_speed_kmh', 10.2)  # km/h (org: 16.8 km/h)
+        self.declare_parameter('gear4_max_speed_kmh', 11.9)  # km/h (org: 25.2 km/h)
         #         # Parametry max_speed dla każdego półbiegu w km/h (na podstawie Gear Manager z marginesem bezpieczeństwa)
         # self.declare_parameter('gear1_max_speed_kmh', 11.5)   # km/h (org: 8.4 km/h)
         # self.declare_parameter('gear2_max_speed_kmh', 13.5)  # km/h (org: 13.0 km/h)
