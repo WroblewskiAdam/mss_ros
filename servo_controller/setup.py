@@ -23,6 +23,7 @@ setup(
             'servo_node = servo_controller.servo_node:main',
             'servo_teleop = servo_controller.servo_teleop_node:main',
             'servo_profiler = servo_controller.servo_profiler_node:main',
+            'servo_random_signal_generator = servo_controller.servo_random_signal_generator:main',
         ],
     },
 )
