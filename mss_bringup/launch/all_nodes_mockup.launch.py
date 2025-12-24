@@ -91,13 +91,13 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True,
         ),
-        Node(
-            package='speed_controller',
-            executable='speed_controller_node',
-            name='speed_controller_node',
-            output='screen',
-            emulate_tty=True,
-        ),
+        # Node(
+        #     package='speed_controller',
+        #     executable='speed_controller_node',
+        #     name='speed_controller_node',
+        #     output='screen',
+        #     emulate_tty=True,
+        # ),
         Node(
             package='position_controller',
             executable='position_controller_node',
@@ -117,13 +117,13 @@ def generate_launch_description():
                 'control_frequency': 10.0
             }]
         ),
-        Node(
-            package='relative_position_computer',
-            executable='relative_computer_node',
-            name='relative_computer_node',
-            output='screen',
-            emulate_tty=True,
-        ),
+        # Node(
+        #     package='relative_position_computer',
+        #     executable='relative_computer_node',
+        #     name='relative_computer_node',
+        #     output='screen',
+        #     emulate_tty=True,
+        # ),
         Node(
             package='gear_manager',
             executable='gear_manager_node',

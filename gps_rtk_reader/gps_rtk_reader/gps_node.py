@@ -18,15 +18,17 @@ class GpsRtkNode(Node):
         super().__init__('gps_rtk_node')
 
         # Deklaracja i pobieranie parametrów (bez zmian)
-        self.declare_parameter('serial_port', '/dev/ttyUSB0')
+        # self.declare_parameter('serial_port', '/dev/ttyUSB0')
+        self.declare_parameter('serial_port', '/dev/ttyAMA0')        
         self.declare_parameter('baud_rate', 460800)
         self.declare_parameter('ntrip_ip', 'system.asgeupos.pl')
-        self.declare_parameter('ntrip_port', 8080)
-        self.declare_parameter('ntrip_mountpoint', 'RTN4G_VRS_RTCM32') 
-        self.declare_parameter('ntrip_user', 'pwmgr/adamwrb')
+        self.declare_parameter('ntrip_port', 8086)
+        self.declare_parameter('ntrip_mountpoint', 'RTK4G_MULTI_RTCM32') 
+        self.declare_parameter('ntrip_user', 'pweiti/turbobolek')
         self.declare_parameter('ntrip_password', 'Globus7142001')
         self.declare_parameter('gngga_ntrip_interval', 10.0)
         self.declare_parameter('publish_frequency', 20.0)
+        self.declare_parameter('heading_dual', 1)
 
         self.serial_port = self.get_parameter('serial_port').get_parameter_value().string_value
         self.baud_rate = self.get_parameter('baud_rate').get_parameter_value().integer_value
@@ -37,6 +39,7 @@ class GpsRtkNode(Node):
         self.ntrip_password = self.get_parameter('ntrip_password').get_parameter_value().string_value
         self.gngga_ntrip_interval = self.get_parameter('gngga_ntrip_interval').get_parameter_value().double_value
         self.publish_frequency = self.get_parameter('publish_frequency').get_parameter_value().double_value
+        self.heading_dual = self.get_parameter('heading_dual').get_parameter_value().integer_value
 
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,
@@ -246,41 +249,64 @@ class GpsRtkNode(Node):
                         # --- PARSOWANIE WIADOMOŚCI AGRIC (tylko kurs) ---
                         elif decoded_line.startswith("#AGRICA"):
                             try:
-                                # Wiadomość ma format: #HEADER;DATA*CRC
-                                # Dzielimy najpierw po ';', bierzemy drugą część, a następnie dzielimy po ','
                                 data_part = decoded_line.split(';')[1].split('*')[0]
                                 agric_parts = data_part.split(',')
                                 
-                                # Walidacja długości tablicy
-                                if len(agric_parts) < 21:
-                                    self.get_logger().warn(f"AGRIC: Za mało pól ({len(agric_parts)}), oczekiwano minimum 21", throttle_duration_sec=5)
-                                    continue
-                                
-                                # Walidacja i konwersja statusu kursu
-                                try:
-                                    heading_status = int(agric_parts[11 - 2])
-                                except (ValueError, IndexError) as e:
-                                    self.get_logger().warn(f"AGRIC: Błąd parsowania statusu kursu: {e}", throttle_duration_sec=5)
-                                    continue
-                                
-                                if heading_status not in [69,420]: # Tylko jeśli status to FIXED lub FLOAT
-                                    # Walidacja i konwersja kursu
-                                    try:
-                                        heading_str = agric_parts[21 - 2].strip()
-                                        
-                                        # Użyj funkcji walidacji
-                                        if not self._validate_numeric_string(heading_str, "kurs"):
-                                            self.get_logger().warn(f"AGRIC: Nieprawidłowy format kursu: '{heading_str}' w wiadomości: {decoded_line}", throttle_duration_sec=5)
-                                            continue
-                                        
-                                        self.latest_gps_data['heading_deg'] = float(heading_str)
-                                        self.latest_gps_data['timestamp_agric'] = current_host_time
-                                        self.get_logger().debug(f"AGRIC: Kurs {self.latest_gps_data['heading_deg']:.2f}°")
-                                    except (ValueError, IndexError) as e:
-                                        self.get_logger().warn(f"AGRIC: Błąd konwersji kursu '{agric_parts[21 - 2]}': {e} w wiadomości: {decoded_line}", throttle_duration_sec=5)
+                                if self.heading_dual == 1:
+                                    if len(agric_parts) < 21:
+                                        self.get_logger().warn(f"AGRIC (Dual): Za mało pól ({len(agric_parts)}), oczekiwano minimum 21", throttle_duration_sec=5)
                                         continue
+                                    
+                                    try:
+                                        heading_status = int(agric_parts[11 - 2]) # Pole 9
+                                    except (ValueError, IndexError) as e:
+                                        self.get_logger().warn(f"AGRIC (Dual): Błąd parsowania statusu kursu: {e}", throttle_duration_sec=5)
+                                        continue
+                                    
+                                    if heading_status not in [69, 420]: # Tylko jeśli status to FIXED lub FLOAT
+                                        try:
+                                            heading_str = agric_parts[21 - 2].strip() # Pole 19
+                                            
+                                            if not self._validate_numeric_string(heading_str, "kurs (dual)"):
+                                                self.get_logger().warn(f"AGRIC (Dual): Nieprawidłowy format kursu: '{heading_str}'", throttle_duration_sec=5)
+                                                continue
+                                            
+                                            self.latest_gps_data['heading_deg'] = float(heading_str)
+                                            self.latest_gps_data['timestamp_agric'] = current_host_time
+                                            self.get_logger().debug(f"AGRIC (Dual): Kurs {self.latest_gps_data['heading_deg']:.2f}°")
+                                        except (ValueError, IndexError) as e:
+                                            self.get_logger().warn(f"AGRIC (Dual): Błąd konwersji kursu '{agric_parts[21 - 2]}': {e}", throttle_duration_sec=5)
+                                            continue
+                                    else:
+                                        self.get_logger().warn(f"AGRIC (Dual): Status kursu ('{heading_status}') nie jest poprawny. Ignoruję kurs.", throttle_duration_sec=5)
+                                
                                 else:
-                                    self.get_logger().warn(f"AGRIC: Status kursu ('{heading_status}') nie jest poprawny. Ignoruję kurs.", throttle_duration_sec=5)
+                                    if len(agric_parts) < 51:
+                                        self.get_logger().warn(f"AGRIC (Single): Za mało pól ({len(agric_parts)}), oczekiwano minimum 51", throttle_duration_sec=5)
+                                        continue
+
+                                    # Pobieramy aktualną prędkość (już przetworzoną z GNVTG)
+                                    current_speed_mps = self.latest_gps_data.get('speed_mps', 0.0)
+                                    
+                                    if current_speed_mps > 0.5:
+                                        try:
+                                            heading_str = agric_parts[51 - 2].strip() # Pole 49
+                                            
+                                            if not self._validate_numeric_string(heading_str, "kurs (single)"):
+                                                self.get_logger().warn(f"AGRIC (Single): Nieprawidłowy format kursu: '{heading_str}'", throttle_duration_sec=5)
+                                                continue
+                                                
+                                            self.latest_gps_data['heading_deg'] = float(heading_str)
+                                            self.latest_gps_data['timestamp_agric'] = current_host_time
+                                            self.get_logger().debug(f"AGRIC (Single): Kurs {self.latest_gps_data['heading_deg']:.2f}° przy {current_speed_mps:.2f} m/s")
+                                            
+                                        except (ValueError, IndexError) as e:
+                                            self.get_logger().warn(f"AGRIC (Single): Błąd konwersji kursu '{agric_parts[51 - 2]}': {e}", throttle_duration_sec=5)
+                                            continue
+                                    else:
+                                        self.latest_gps_data['timestamp_agric'] = current_host_time
+                                        self.get_logger().debug(f"AGRIC (Single): Prędkość {current_speed_mps:.2f} m/s <= 0.5 m/s. Kurs nie jest aktualizowany (używany ostatni znany).", throttle_duration_sec=1)
+                                        
                             except (ValueError, IndexError) as e:
                                 self.get_logger().warn(f"Błąd parsowania AGRIC: {e} w wiadomości: {decoded_line}", throttle_duration_sec=5)
                         # --- KONIEC PARSOWANIA ---
@@ -406,7 +432,7 @@ class GpsRtkNode(Node):
             response_str = response.decode('ascii', errors='ignore')
             self.get_logger().info(f"Odpowiedź serwera NTRIP: {response_str.strip()}")
 
-            if "ICY 200 OK" not in response_str:
+            if "200 OK" not in response_str:
                 self.get_logger().error(f"Błąd autoryzacji NTRIP lub serwer nie jest gotowy. Odpowiedź: {response_str.strip()}")
                 self.ntrip_socket.close()
                 return False

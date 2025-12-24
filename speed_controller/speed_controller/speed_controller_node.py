@@ -356,11 +356,24 @@ class SpeedControllerNode(Node):
         previous_gear = self.current_gear
         self.current_gear = msg.gear  # Aktualizuj aktualny bieg
         
+
         # Logowanie zmian półbiegu gdy main_gear=1
         if (self.main_gear == 1 and previous_gear != msg.gear and msg.gear != 0):
             current_params = self.get_current_pid_params()
             self.get_logger().info(f"ZMIANA PÓŁBIEGU: {previous_gear} → {msg.gear}")
             self.get_logger().info(f"NOWE PARAMETRY PID dla półbiegu {msg.gear}: kp={current_params['kp']}, ki={current_params['ki']}, kd={current_params['kd']}")
+
+        gear_changed = (previous_gear != msg.gear) and (msg.gear != 0)
+        if self.autopilot_enabled and gear_changed:
+            old_integral_sum = self.integral_sum
+            integrator_init_value = self.calculate_integrator_initialization(self.target_speed_mps)
+            self.get_logger().info(
+                f"REINICJALIZACJA INTEGRATORA (zmiana biegu): "
+                f"V_zadana={self.target_speed_mps:.2f}m/s, "
+                f"Stara wartość integratora={old_integral_sum:.1f}°, "
+                f"Nowa wartość integratora={integrator_init_value:.1f}°"
+            )
+            self.integral_sum = integrator_init_value
 
     def calculate_integrator_initialization(self, current_speed_mps):
         """

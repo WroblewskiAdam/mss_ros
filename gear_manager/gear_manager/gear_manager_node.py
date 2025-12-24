@@ -18,7 +18,9 @@ class GearManagerNode(Node):
         # NOWE PROGI Z HISTEREZĄ - na podstawie doświadczeń użytkownika (histereza 1.5 km/h)
         # self.declare_parameter('upshift_speeds_kmh', [10.0, 13.0, 16.0, 34.0])  # km/h - progi upshift z histerezą
         # self.declare_parameter('downshift_speeds_kmh', [0.0, 8.5, 11.5, 14.5])  # km/h - progi downshift z histerezą
-        self.declare_parameter('upshift_speeds_kmh', [6.8, 8.0, 9.4, 15.0])  # km/h - progi upshift z histerezą
+        # self.declare_parameter('upshift_speeds_kmh', [6.8, 8.0, 9.4, 15.0])  # km/h - progi upshift z histerezą
+        # self.declare_parameter('downshift_speeds_kmh', [0.0, 5.3, 6.5, 7.9])  # km/h - progi downshift z histerezą
+        self.declare_parameter('upshift_speeds_kmh', [6.5, 7.8, 9.5, 15.0])  # km/h - progi upshift z histerezą
         self.declare_parameter('downshift_speeds_kmh', [0.0, 5.3, 6.5, 7.9])  # km/h - progi downshift z histerezą
         self.declare_parameter('shift_cooldown_sec', 4.0)
         self.declare_parameter('max_powershift', 4)

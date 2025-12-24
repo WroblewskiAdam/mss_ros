@@ -8,7 +8,7 @@ import numpy as np
 import json
 import psutil
 import time
-# Upewnij się, że nazwa pakietu z wiadomościami jest poprawna
+from scipy.signal import butter, lfilter, lfilter_zi
 from my_robot_interfaces.msg import GpsRtk, DistanceMetrics
 from std_msgs.msg import String 
 
@@ -29,6 +29,10 @@ class RelativeComputerNode(Node):
         self.declare_parameter('tractor_longitudinal_offset_m', 6.4)
         self.declare_parameter('chopper_longitudinal_offset_m', 0.6)
 
+        self.declare_parameter('long_filter_cutoff_hz', 1.0)  # Niska częstotliwość dla płynnej zmiany odległości
+        self.declare_parameter('long_filter_order', 2)
+        self.declare_parameter('sampling_frequency_hz', 20.0) # Częstotliwość parowania wiadomości (zależy od nadawców)
+
         tractor_topic = self.get_parameter('tractor_gps_topic').get_parameter_value().string_value
         chopper_topic = self.get_parameter('chopper_gps_topic').get_parameter_value().string_value
         metrics_topic = self.get_parameter('distance_metrics_topic').get_parameter_value().string_value
@@ -36,6 +40,13 @@ class RelativeComputerNode(Node):
         self.tractor_longitudinal_offset_m = self.get_parameter('tractor_longitudinal_offset_m').get_parameter_value().double_value
         self.chopper_longitudinal_offset_m = self.get_parameter('chopper_longitudinal_offset_m').get_parameter_value().double_value
 
+        self.cutoff_hz = self.get_parameter('long_filter_cutoff_hz').get_parameter_value().double_value
+        self.filter_order = self.get_parameter('long_filter_order').get_parameter_value().integer_value
+        self.fs = self.get_parameter('sampling_frequency_hz').get_parameter_value().double_value
+        self.b, self.a = butter(self.filter_order, self.cutoff_hz, btype='low', analog=False, fs=self.fs)
+        self.zi = lfilter_zi(self.b, self.a)
+        self.filter_initialized = False
+    
         self.origin_lat_rad = None
         self.origin_lon_rad = None
         self.is_origin_set = False
@@ -98,15 +109,22 @@ class RelativeComputerNode(Node):
         dist_longitudinal = dist_longitudinal_raw + (self.chopper_longitudinal_offset_m - self.tractor_longitudinal_offset_m)
         dist_lateral = np.cross(chopper_heading_vector, vector_chopper_to_tractor)
 
+
+        if not self.filter_initialized:
+            self.zi = self.zi * dist_longitudinal
+            self.filter_initialized = True
+            dist_longitudinal_filtered = dist_longitudinal
+            self.get_logger().info(f"Filtr wzdłużny zainicjalizowany wartością: {dist_longitudinal_filtered:.2f}m")
+        else:
+            filtered_res, self.zi = lfilter(self.b, self.a, [dist_longitudinal], zi=self.zi)
+            dist_longitudinal_filtered = filtered_res[0]
+
         metrics_msg = DistanceMetrics()
-        
-        # === ZMIANA: Dodajemy znacznik czasu ===
         metrics_msg.header.stamp = self.get_clock().now().to_msg()
-        # ======================================
 
         # Rzutowanie na standardowy typ float
         metrics_msg.distance_straight = float(dist_straight)
-        metrics_msg.distance_longitudinal = float(dist_longitudinal)
+        metrics_msg.distance_longitudinal = float(dist_longitudinal_filtered)
         metrics_msg.distance_lateral = float(dist_lateral)
         
         self.metrics_publisher.publish(metrics_msg)

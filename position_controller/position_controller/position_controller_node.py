@@ -26,7 +26,7 @@ class PositionControllerNode(Node):
         self.declare_parameter('Kd', 0.0)  # wzmocnienie różniczkujące
         
         # Parametry PID dla poszczególnych półbiegów
-        self.declare_parameter('gear1_Kp', 0.36)  # Półbieg 1 - wolny, stabilny
+        self.declare_parameter('gear1_Kp', 0.34)  # Półbieg 1 - wolny, stabilny
         self.declare_parameter('gear1_Ki', 0.00)
         self.declare_parameter('gear1_Kd', 0.0)
         
@@ -34,11 +34,11 @@ class PositionControllerNode(Node):
         self.declare_parameter('gear2_Ki', 0.0)
         self.declare_parameter('gear2_Kd', 0.0)
         
-        self.declare_parameter('gear3_Kp', 0.37)  # Półbieg 3 - szybszy
+        self.declare_parameter('gear3_Kp', 0.35)  # Półbieg 3 - szybszy
         self.declare_parameter('gear3_Ki', 0.0)
         self.declare_parameter('gear3_Kd', 0.0)
         
-        self.declare_parameter('gear4_Kp', 0.45)  # Półbieg 4 - najszybszy
+        self.declare_parameter('gear4_Kp', 0.36)  # Półbieg 4 - najszybszy
         self.declare_parameter('gear4_Ki', 0.0)
         self.declare_parameter('gear4_Kd', 0.0)
         
